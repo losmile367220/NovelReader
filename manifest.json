@@ -1,0 +1,10 @@
+{
+  "name": "私藏書閣",
+  "short_name": "私藏書閣",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5efe7",
+  "theme_color": "#f5efe7",
+  "description": "私人無廣告小說閱讀器"
+}

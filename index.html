@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#f5efe7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="私藏書閣">
+<link rel="manifest" href="./manifest.json">
+<title>私藏書閣 V6.1</title>
+<style>
+:root{
+ --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
+ --rbg:#f6f1e9;--rt:#211e1a;--fs:20px;--lh:1.9;--ls:.01em;--side:26px;--para:1em;
+ --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px)
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--app);color:var(--ink)}
+button,input,textarea{font:inherit}button{cursor:pointer}
+.hidden{display:none!important}
+.app{max-width:1180px;margin:auto;padding:18px}
+.header{display:flex;align-items:center;justify-content:space-between;padding:8px 0 18px}.brand{display:flex;align-items:center;gap:12px}.mark{width:48px;height:48px;border-radius:16px;background:#26231f;color:#fff;display:grid;place-items:center;font-size:20px}.brand h1{font-size:22px;margin:0}.brand small{color:var(--muted)}
+.actions{display:flex;gap:8px}.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:10px 14px}.btn.dark{background:var(--accent);color:#fff;border-color:var(--accent)}
+.hero{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:28px;box-shadow:0 18px 48px #5a463317}.hero h2{font-size:28px;margin:0 0 8px}.hero p{margin:0;color:var(--muted);line-height:1.7}
+.section-title{display:flex;justify-content:space-between;align-items:end;margin:26px 2px 12px}.section-title h3{margin:0}.section-title small{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}.book{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:14px;box-shadow:0 14px 34px #5a463312}.cover{height:112px;border-radius:17px;padding:15px;color:#fff;font-weight:800;display:flex;align-items:flex-end;background:linear-gradient(145deg,#5f554b,#b7a38e)}.book h4{margin:13px 0 5px}.meta{font-size:12px;color:var(--muted)}.bar{height:5px;background:var(--line);border-radius:9px;margin:12px 0;overflow:hidden}.bar i{display:block;height:100%;background:#70665d}.book .row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.empty{grid-column:1/-1;padding:50px 20px;text-align:center;border:1px dashed var(--line);border-radius:22px;color:var(--muted)}
+.setup{position:fixed;inset:0;z-index:200;background:var(--app);display:grid;place-items:center;padding:20px}.setup-card{width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:28px;padding:24px;box-shadow:0 22px 60px #4e3b2820}.setup-card h2{margin-top:0}.setup-card p{color:var(--muted);line-height:1.7}.setup-card input{width:100%;padding:13px;border:1px solid var(--line);border-radius:13px;background:#f8f3ed;margin:8px 0 12px}
+.bridge{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:0}
+
+/* full-screen app reader */
+.reader{position:fixed;inset:0;z-index:100;background:var(--rbg);color:var(--rt);display:none;overflow:hidden}.reader.on{display:block}
+.reader-head{position:absolute;z-index:5;top:0;left:0;right:0;padding:calc(9px + var(--safe-t)) 16px 9px;height:calc(62px + var(--safe-t));display:grid;grid-template-columns:90px 1fr 90px;align-items:end;background:color-mix(in srgb,var(--rbg) 94%,transparent);backdrop-filter:blur(18px);border-bottom:1px solid color-mix(in srgb,var(--rt) 10%,transparent);transition:.22s}.reader.clean .reader-head{transform:translateY(-110%)}
+.iconbtn{border:0;background:transparent;color:inherit;height:40px;border-radius:13px;font-weight:650}.iconbtn:active{background:color-mix(in srgb,var(--rt) 8%,transparent)}
+.center{text-align:center;min-width:0}.center b,.center small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.center b{font-size:13px}.center small{font-size:11px;opacity:.45;margin-top:2px}
+.scroller{height:100%;overflow:auto;-webkit-overflow-scrolling:touch;padding:calc(92px + var(--safe-t)) var(--side) calc(135px + var(--safe-b))}
+.article{max-width:760px;margin:auto}.chapter-kicker{font-size:13px;opacity:.45;margin-bottom:28px}.chapter-title{font-size:1.18em;margin:0 0 36px;font-weight:750}
+.content{white-space:pre-wrap;font-size:var(--fs);line-height:var(--lh);letter-spacing:var(--ls);font-weight:450}
+.content::first-line{}.content{word-break:break-word}
+.bottom{position:absolute;z-index:6;left:50%;bottom:calc(12px + var(--safe-b));transform:translateX(-50%);width:min(680px,calc(100% - 20px));background:color-mix(in srgb,var(--rbg) 96%,transparent);border:1px solid color-mix(in srgb,var(--rt) 10%,transparent);border-radius:22px;box-shadow:0 12px 34px #0002;backdrop-filter:blur(20px);padding:8px;display:grid;grid-template-columns:repeat(7,1fr);gap:3px;transition:.22s}.reader.clean .bottom{transform:translate(-50%,150%)}
+.tool{height:48px;border:0;background:transparent;color:inherit;border-radius:15px;font-weight:750}.tool:active{background:color-mix(in srgb,var(--rt) 9%,transparent)}
+.drawer{position:absolute;z-index:15;left:0;right:0;bottom:0;max-height:82vh;overflow:auto;background:#fffaf6;color:#211e1a;border-radius:28px 28px 0 0;padding:12px 18px calc(22px + var(--safe-b));box-shadow:0 -18px 50px #0003;transform:translateY(105%);transition:.25s}.drawer.on{transform:none}.handle{width:48px;height:5px;background:#d3cbc4;border-radius:9px;margin:0 auto 14px}.drawer h3{margin:0}.drawer-head{display:flex;justify-content:space-between;align-items:center}.setting{background:#f7eee8;border-radius:22px;margin-top:14px;padding:5px 14px}.srow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #eadfd8}.srow:last-child{border:0}.step{display:flex;align-items:center;gap:9px}.step button{width:46px;height:36px;border:1px solid #c8beb6;border-radius:99px;background:#fff}.step span{min-width:42px;text-align:center;color:#746a62}
+.palette{display:grid;grid-template-columns:repeat(8,1fr);gap:11px;padding:14px 0}.sw{aspect-ratio:1;border-radius:50%;border:1px solid #0002}.sw.sel{outline:3px solid #2a2723;outline-offset:2px}
+.sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0}
+.sidepanel{position:absolute;z-index:20;top:0;bottom:0;width:min(430px,92vw);background:#fffaf6;color:#211e1a;padding:calc(18px + var(--safe-t)) 16px calc(18px + var(--safe-b));overflow:auto;box-shadow:0 0 40px #0002;transition:.23s}.sidepanel.left{left:0;transform:translateX(-105%)}.sidepanel.right{right:0;transform:translateX(105%)}.sidepanel.on{transform:none}.panelhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.tocitem,.bmitem{width:100%;text-align:left;border:0;border-bottom:1px solid #eadfd8;background:transparent;padding:14px 6px}.tocitem.now{font-weight:850}.bmitem small{display:block;color:#8d8279;margin-top:5px;line-height:1.5}
+.editor{position:fixed;inset:0;z-index:250;background:#f7f1eb;display:none;padding:calc(14px + var(--safe-t)) 14px calc(14px + var(--safe-b))}.editor.on{display:flex;flex-direction:column}.editor textarea{flex:1;min-height:0;width:100%;resize:none;border:1px solid var(--line);border-radius:18px;padding:16px;font-size:17px;line-height:1.7;background:#fff}.editorbar{display:flex;justify-content:space-between;gap:8px;margin-bottom:10px}.editoractions{display:flex;gap:8px;margin-top:10px}
+.modal{position:fixed;inset:0;z-index:180;background:#0007;display:none;place-items:center;padding:14px}.modal.on{display:grid}.modalbox{width:min(720px,100%);max-height:90vh;overflow:auto;background:var(--card);border-radius:24px;padding:18px}.modalbox textarea,.modalbox input{width:100%;border:1px solid var(--line);border-radius:13px;padding:12px;background:#f8f3ed;margin:6px 0 12px}.modalbox textarea{min-height:260px}.toast{position:fixed;z-index:400;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;background:#222;color:#fff;border-radius:13px;padding:10px 14px;transition:.2s}.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media(max-width:680px){
+ .app{padding:12px}.brand small{display:none}.hero{display:none}.header{padding-top:calc(5px + var(--safe-t))}.grid{grid-template-columns:1fr 1fr;gap:9px}.book{padding:10px}.cover{height:92px}.book .row{grid-template-columns:1fr}
+ .reader-head{grid-template-columns:72px 1fr 72px}.scroller{padding-left:var(--side);padding-right:var(--side)}.bottom{bottom:calc(8px + var(--safe-b));border-radius:20px}.tool{height:46px;padding:0 4px;font-size:13px}.palette{grid-template-columns:repeat(6,1fr)}
+}
+@media(max-width:430px){.grid{grid-template-columns:1fr}.book .row{grid-template-columns:1fr 1fr}}
+@media(min-width:900px){.drawer{left:50%;right:auto;width:640px;bottom:22px;border-radius:28px;transform:translate(-50%,120%)}.drawer.on{transform:translate(-50%,0)}}
+</style>
+</head>
+<body>
+<iframe id="bridge" class="bridge"></iframe>
+
+<section id="setup" class="setup">
+ <div class="setup-card"><h2>私藏書閣 V6.1</h2><p>第一次只要設定一次 GAS 後端網址。貼上你 Apps Script「網頁應用程式」的 <b>/exec</b> 網址；之後會記在這台裝置。</p>
+ <input id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
+ <button class="btn dark" id="connect">連接我的雲端書櫃</button><div id="setupMsg" style="margin-top:12px;color:#8f857b"></div></div>
+</section>
+
+<main class="app">
+ <header class="header"><div class="brand"><div class="mark">書</div><div><h1>私藏書閣</h1><small>V6.1 · 私人雲端閱讀器</small></div></div><div class="actions"><button class="btn" id="sync">↻</button><button class="btn dark" id="importBtn">＋ 匯入</button></div></header>
+ <section class="hero"><h2>你的小說，換個裝置也能接著看。</h2><p>Google Drive 雲端書櫃、閱讀進度、書籤與閱讀設定同步。手機加入主畫面後會以獨立 App 模式開啟。</p></section>
+ <div class="section-title"><div><h3>我的書櫃</h3><small id="count">等待連線</small></div><button class="btn" id="changeBackend">後端設定</button></div>
+ <section id="books" class="grid"><div class="empty">正在準備書櫃…</div></section>
+</main>
+
+<section id="reader" class="reader">
+ <header class="reader-head"><button class="iconbtn" id="leave">‹ 書櫃</button><div class="center"><b id="bookName"></b><small id="prog"></small></div><button class="iconbtn" id="tocOpen">目錄</button></header>
+ <div id="scroll" class="scroller"><article class="article"><div id="kicker" class="chapter-kicker"></div><h2 id="ctitle" class="chapter-title"></h2><div id="content" class="content"></div></article></div>
+ <nav class="bottom">
+  <button class="tool" id="smaller">A−</button>
+  <button class="tool" id="larger">A＋</button>
+  <button class="tool" id="bookmark">☆<br><small>書籤</small></button>
+  <button class="tool" id="speech">▶<br><small>朗讀</small></button>
+  <button class="tool" id="prev">‹<br><small>上章</small></button>
+  <button class="tool" id="next">›<br><small>下章</small></button>
+  <button class="tool" id="more">Aa<br><small>設定</small></button>
+ </nav>
+ <aside id="toc" class="sidepanel left"><div class="panelhead"><h3>章節目錄</h3><button class="btn" data-close="toc">✕</button></div><div id="tocList"></div></aside>
+ <aside id="bms" class="sidepanel right"><div class="panelhead"><h3>我的書籤</h3><button class="btn" data-close="bms">✕</button></div><div id="bmList"></div></aside>
+ <section id="drawer" class="drawer"><div class="handle"></div><div class="drawer-head"><h3>閱讀設定</h3><button class="btn" data-close="drawer">完成</button></div>
+  <div class="setting">
+   <div class="srow"><span>字體大小</span><div class="step"><button id="fminus">−</button><span id="fval">20</span><button id="fplus">＋</button></div></div>
+   <div class="srow"><span>行間距</span><div class="step"><button id="lminus">−</button><span id="lval">1.90</span><button id="lplus">＋</button></div></div>
+   <div class="srow"><span>左右邊距</span><div class="step"><button id="mminus">−</button><span id="mval">26</span><button id="mplus">＋</button></div></div>
+   <div class="srow"><span>字間距</span><div class="step"><button id="aminus">−</button><span id="aval">0.01</span><button id="aplus">＋</button></div></div>
+   <div class="srow"><span>翻章方式</span><div class="step"><button id="verticalMode" style="width:auto;padding:0 12px">上下滑</button><button id="horizontalMode" style="width:auto;padding:0 12px">左右滑</button></div></div>
+  </div>
+  <div class="setting"><b>背景顏色</b><div id="palette" class="palette"></div><small id="themeName" style="color:#8f857b"></small></div>
+  <div class="setting"><div class="sheet-actions"><button class="btn" id="bmOpen">🔖 書籤列表</button><button class="btn" id="edit">✎ 編輯本章</button><button class="btn" id="closeBook">回到書櫃</button><button class="btn" id="tocFromSettings">章節目錄</button></div></div>
+ </section>
+</section>
+
+<section id="editor" class="editor"><div class="editorbar"><b id="editName"></b><button class="btn" id="editClose">✕</button></div><textarea id="editText"></textarea><div class="editoractions"><button class="btn dark" id="editSave">儲存雲端副本</button><button class="btn" id="restore">還原原文</button></div></section>
+
+<div id="importModal" class="modal"><div class="modalbox"><div class="panelhead"><h3>匯入 TXT / 正文</h3><button class="btn" id="importClose">✕</button></div><input id="titleInput" placeholder="書名"><input id="fileInput" type="file" accept=".txt,text/plain"><textarea id="pasteInput" placeholder="也可以直接把小說正文貼在這裡"></textarea><button class="btn dark" id="importGo">加入雲端書櫃</button></div></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let bridgeReady=false,pending=new Map(),seq=0,shelf=[],book=null,ci=0,pt=null,st=null,speaking=false;
+let cfg={fontSize:20,lineHeight:1.9,letterSpacing:.01,sideMargin:26,turnMode:'horizontal',readerBg:'#f6f1e9',readerText:'#211e1a',themeName:'米白'};
+const themes=[
+ ['純白','#fff','#202020'],['米白','#f6f1e9','#211e1a'],['暖灰','#e8e5df','#282622'],['奶茶','#ded2bf','#2d2923'],
+ ['霧綠','#d9e2d4','#263027'],['薄荷','#dce9e1','#24302a'],['霧藍','#dce4ea','#26313a'],['淡紫','#e8e0ea','#302934'],
+ ['淡粉','#f0dfe5','#382a2f'],['杏色','#ecd9bb','#33291f'],['夜黑','#181818','#eee9e2'],['墨灰','#292d2b','#ecebe6']
+];
+const esc=s=>(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function toast(s){$('#toast').textContent=s;$('#toast').classList.add('on');setTimeout(()=>$('#toast').classList.remove('on'),1700)}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function gas(fn,...args){return new Promise((ok,no)=>{if(!bridgeReady)return no(new Error('雲端橋接尚未連線'));const id='c'+(++seq);pending.set(id,{ok,no});$('#bridge').contentWindow.postMessage({type:'NOVEL_V6_CALL',id,fn,args},'*');setTimeout(()=>{if(pending.has(id)){pending.delete(id);no(new Error('雲端回應逾時'))}},30000)})}
+window.addEventListener('message',e=>{const m=e.data||{};if(e.source!==$('#bridge').contentWindow)return;if(m.type==='NOVEL_V6_READY'){bridgeReady=true;$('#setupMsg').textContent='雲端已連線';bootCloud()}if(m.type==='NOVEL_V6_RESULT'&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.ok?p.ok(m.result):p.no(new Error(m.error||'雲端錯誤'))}});
+function connect(url){url=(url||'').trim().replace(/\?.*$/,'');if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url)){ $('#setupMsg').textContent='請貼 Apps Script 部署後的 /exec 網址';return}localStorage.setItem('novelV6Gas',url);bridgeReady=false;$('#bridge').src=url+'?bridge=1&v='+Date.now()}
+$('#connect').onclick=()=>connect($('#gasUrl').value);$('#changeBackend').onclick=()=>{$('#setup').classList.remove('hidden');$('#gasUrl').value=localStorage.getItem('novelV6Gas')||''}
+async function bootCloud(){try{const h=await gas('healthCheck');if(!h?.ok)throw new Error(h?.error||'連線失敗');try{cfg={...cfg,...await gas('loadReaderSettings')}catch{}applyCfg(false);$('#setup').classList.add('hidden');await refresh()}catch(e){$('#setupMsg').textContent=e.message}}
+async function refresh(){try{$('#count').textContent='同步中…';shelf=await gas('listBooks')||[];renderBooks()}catch(e){$('#count').textContent='同步失敗';$('#books').innerHTML='<div class="empty">'+esc(e.message)+'</div>'}}
+function renderBooks(){$('#count').textContent=shelf.length+' 本小說';$('#books').innerHTML=shelf.length?shelf.map(b=>{const c=Math.min(b.progress?.chapter||0,Math.max(0,b.chapterCount-1)),p=Math.round((c/Math.max(1,b.chapterCount))*100);return `<article class="book"><div class="cover">${esc(b.title.slice(0,20))}</div><h4>${esc(b.title)}</h4><div class="meta">${b.chapterCount} 章 · ${p}%</div><div class="bar"><i style="width:${p}%"></i></div><div class="row"><button class="btn dark" onclick="openBook('${b.id}')">閱讀</button><button class="btn" onclick="exportTxt('${b.id}')">TXT</button></div></article>`}).join(''):'<div class="empty">書櫃目前是空的。</div>'}
+$('#sync').onclick=refresh;
+function applyCfg(save=true){document.documentElement.style.setProperty('--fs',cfg.fontSize+'px');document.documentElement.style.setProperty('--lh',cfg.lineHeight);document.documentElement.style.setProperty('--ls',cfg.letterSpacing+'em');document.documentElement.style.setProperty('--side',cfg.sideMargin+'px');document.documentElement.style.setProperty('--rbg',cfg.readerBg);document.documentElement.style.setProperty('--rt',cfg.readerText);$('#fval').textContent=cfg.fontSize;$('#lval').textContent=Number(cfg.lineHeight).toFixed(2);$('#mval').textContent=cfg.sideMargin;$('#aval').textContent=Number(cfg.letterSpacing).toFixed(2);$('#themeName').textContent=cfg.themeName||'自訂';
+if($('#verticalMode')&&$('#horizontalMode')){
+  $('#verticalMode').style.background=cfg.turnMode==='vertical'?'#26231f':'#fff';
+  $('#verticalMode').style.color=cfg.turnMode==='vertical'?'#fff':'#211e1a';
+  $('#horizontalMode').style.background=cfg.turnMode==='horizontal'?'#26231f':'#fff';
+  $('#horizontalMode').style.color=cfg.turnMode==='horizontal'?'#fff':'#211e1a';
+}
+renderPalette();if(save){clearTimeout(st);st=setTimeout(()=>gas('saveReaderSettings',cfg).catch(()=>{}),500)}}
+function renderPalette(){$('#palette').innerHTML=themes.map((t,i)=>`<button class="sw ${cfg.readerBg===t[1]?'sel':''}" style="background:${t[1]}" onclick="theme(${i})"></button>`).join('')}
+window.theme=i=>{const t=themes[i];cfg.readerBg=t[1];cfg.readerText=t[2];cfg.themeName=t[0];applyCfg()}
+function font(d){cfg.fontSize=Math.max(14,Math.min(34,cfg.fontSize+d));applyCfg()}$('#smaller').onclick=()=>font(-1);$('#larger').onclick=()=>font(1);$('#fminus').onclick=()=>font(-1);$('#fplus').onclick=()=>font(1);
+$('#lminus').onclick=()=>{cfg.lineHeight=Math.max(1.4,Math.round((cfg.lineHeight-.05)*100)/100);applyCfg()};$('#lplus').onclick=()=>{cfg.lineHeight=Math.min(2.6,Math.round((cfg.lineHeight+.05)*100)/100);applyCfg()};
+$('#mminus').onclick=()=>{cfg.sideMargin=Math.max(14,cfg.sideMargin-2);applyCfg()};$('#mplus').onclick=()=>{cfg.sideMargin=Math.min(60,cfg.sideMargin+2);applyCfg()};
+$('#aminus').onclick=()=>{cfg.letterSpacing=Math.max(0,Math.round((cfg.letterSpacing-.01)*100)/100);applyCfg()};$('#aplus').onclick=()=>{cfg.letterSpacing=Math.min(.12,Math.round((cfg.letterSpacing+.01)*100)/100);applyCfg()};
+$('#verticalMode').onclick=()=>{cfg.turnMode='vertical';applyCfg();toast('已切換：上下滑換章')};$('#horizontalMode').onclick=()=>{cfg.turnMode='horizontal';applyCfg();toast('已切換：左右滑換章')};
+window.openBook=async id=>{toast('載入中…');book=await gas('loadBook',id);book.bookmarks=Array.isArray(book.bookmarks)?book.bookmarks:[];ci=Math.min(book.progress?.chapter||0,book.chapters.length-1);$('#reader').classList.add('on');document.body.style.overflow='hidden';showChapter(false)}
+function showChapter(reset=true){speechSynthesis.cancel();speaking=false;const c=book.chapters[ci];$('#bookName').textContent=book.title;$('#prog').textContent=`第 ${ci+1} / ${book.chapters.length} 章`;$('#kicker').textContent=`第 ${ci+1} 章`;$('#ctitle').textContent=c.title;$('#content').textContent=c.content;$('#prev').disabled=ci===0;$('#next').disabled=ci===book.chapters.length-1;$('#tocList').innerHTML=book.chapters.map((x,i)=>`<button class="tocitem ${i===ci?'now':''}" onclick="go(${i})">${i+1}. ${esc(x.title)}</button>`).join('');renderBms();requestAnimationFrame(()=>$('#scroll').scrollTop=reset?0:(book.progress?.scrollPx||0));updateBm()}
+window.go=i=>{ci=i;$('#toc').classList.remove('on');showChapter(true)}
+async function saveProgress(){if(!book)return;book.progress={chapter:ci,scrollPx:$('#scroll').scrollTop};try{await gas('saveProgress',book.id,ci,book.progress.scrollPx)}catch{}}
+$('#scroll').addEventListener('scroll',()=>{clearTimeout(pt);pt=setTimeout(saveProgress,450)});
+$('#scroll').addEventListener('click',e=>{if(e.target!==$('#scroll')&&e.target.closest('.article')===null)return;const x=e.clientX/innerWidth;if(x>.24&&x<.76&&!$('#drawer').classList.contains('on'))$('#reader').classList.toggle('clean')});
+
+let touchStartX=0,touchStartY=0,touchStartTop=0,touchStartAtBottom=false,touchStartAtTop=false;
+$('#scroll').addEventListener('touchstart',e=>{
+ const t=e.touches[0];touchStartX=t.clientX;touchStartY=t.clientY;
+ const s=$('#scroll');touchStartTop=s.scrollTop;
+ touchStartAtTop=s.scrollTop<=2;
+ touchStartAtBottom=(s.scrollTop+s.clientHeight>=s.scrollHeight-3);
+},{passive:true});
+$('#scroll').addEventListener('touchend',e=>{
+ if(!book||!e.changedTouches?.length)return;
+ const t=e.changedTouches[0],dx=t.clientX-touchStartX,dy=t.clientY-touchStartY;
+ const ax=Math.abs(dx),ay=Math.abs(dy),threshold=55;
+
+ if(cfg.turnMode==='horizontal'){
+   if(ax>threshold && ax>ay*1.25){
+     if(dx<0 && ci<book.chapters.length-1){ci++;showChapter(true);toast('下一章')}
+     else if(dx>0 && ci>0){ci--;showChapter(true);toast('上一章')}
+   }
+ }else{
+   // Vertical mode only turns chapter at the boundary so ordinary reading scroll is untouched.
+   if(ay>threshold && ay>ax*1.2){
+     if(dy<0 && touchStartAtBottom && ci<book.chapters.length-1){ci++;showChapter(true);toast('下一章')}
+     else if(dy>0 && touchStartAtTop && ci>0){ci--;showChapter(true);toast('上一章')}
+   }
+ }
+},{passive:true});
+
+$('#tocOpen').onclick=()=>$('#toc').classList.add('on');$('#more').onclick=()=>$('#drawer').classList.add('on');$('#tocFromSettings').onclick=()=>{$('#drawer').classList.remove('on');$('#toc').classList.add('on')};$$('[data-close]').forEach(b=>b.onclick=()=>$('#'+b.dataset.close).classList.remove('on'));
+$('#prev').onclick=()=>{if(ci>0){ci--;showChapter(true)}};$('#next').onclick=()=>{if(ci<book.chapters.length-1){ci++;showChapter(true)}};
+$('#leave').onclick=$('#closeBook').onclick=async()=>{await saveProgress();speechSynthesis.cancel();$('#reader').classList.remove('on','clean');document.body.style.overflow='';await refresh()};
+function bmKey(){return ci+':'+Math.round($('#scroll').scrollTop/120)}function curBm(){const k=bmKey();return book.bookmarks.find(x=>x.key===k)}function updateBm(){$('#bookmark').innerHTML=(curBm()?'★':'☆')+'<br><small>書籤</small>'}
+$('#bookmark').onclick=async()=>{const k=bmKey(),i=book.bookmarks.findIndex(x=>x.key===k);if(i>=0){book.bookmarks.splice(i,1);toast('已移除書籤')}else{const c=book.chapters[ci],px=$('#scroll').scrollTop,raw=(c.content||'').replace(/\s+/g,' '),ratio=px/Math.max(1,$('#scroll').scrollHeight-$('#scroll').clientHeight),pos=Math.floor(raw.length*Math.min(1,ratio));book.bookmarks.push({id:uid(),key:k,chapter:ci,scrollPx:px,title:c.title,excerpt:raw.slice(pos,pos+55),createdAt:Date.now()});toast('已加入書籤')}await gas('saveBook',book);updateBm();renderBms()}
+function renderBms(){$('#bmList').innerHTML=book?.bookmarks?.length?[...book.bookmarks].sort((a,b)=>a.chapter-b.chapter||a.scrollPx-b.scrollPx).map(b=>`<button class="bmitem" onclick="jumpBm('${b.id}')"><b>${b.chapter+1}. ${esc(b.title)}</b><small>${esc(b.excerpt||'')}</small></button>`).join(''):'<div class="empty">還沒有書籤。</div>'}
+window.jumpBm=id=>{const b=book.bookmarks.find(x=>x.id===id);if(!b)return;ci=b.chapter;$('#bms').classList.remove('on');showChapter(true);setTimeout(()=>$('#scroll').scrollTop=b.scrollPx||0,80)}
+$('#bmOpen').onclick=()=>{$('#drawer').classList.remove('on');renderBms();$('#bms').classList.add('on')};
+$('#speech').onclick=()=>{if(speaking){speechSynthesis.cancel();speaking=false;$('#speech').innerHTML='▶<br><small>朗讀</small>';return}const c=book.chapters[ci],u=new SpeechSynthesisUtterance(c.title+'。'+c.content);u.lang='zh-TW';u.rate=.95;u.onend=u.onerror=()=>{speaking=false;$('#speech').innerHTML='▶<br><small>朗讀</small>'};speaking=true;$('#speech').innerHTML='■<br><small>停止</small>';speechSynthesis.speak(u)};
+$('#edit').onclick=()=>{const c=book.chapters[ci];$('#drawer').classList.remove('on');$('#editName').textContent=c.title;$('#editText').value=c.content;$('#editor').classList.add('on')};$('#editClose').onclick=()=>$('#editor').classList.remove('on');$('#editSave').onclick=async()=>{book.chapters[ci].content=$('#editText').value;await gas('saveBook',book);$('#editor').classList.remove('on');showChapter(false);toast('已儲存')};$('#restore').onclick=async()=>{const c=book.chapters[ci];if(!c.originalContent)return toast('沒有原文備份');if(confirm('還原本章原文？')){c.content=c.originalContent;$('#editText').value=c.content;await gas('saveBook',book);toast('已還原')}};
+window.exportTxt=async id=>{const b=await gas('loadBook',id),txt=b.chapters.map(c=>c.title+'\n\n'+c.content).join('\n\n\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b.title+'\n\n\n'+txt],{type:'text/plain;charset=utf-8'}));a.download=b.title.replace(/[\\/:*?"<>|]/g,'_')+'.txt';a.click()};
+function split(text){text=(text||'').replace(/\r\n/g,'\n').trim();const re=/^\s*(?:第\s*[0-9零一二三四五六七八九十百千兩万萬]+\s*[章回節卷篇]|Chapter\s+\d+|楔子|序章|前言|後記|尾聲|番外)[^\n]{0,45}$/i;let out=[],buf=[],title='正文';for(const line of text.split('\n')){if(re.test(line.trim())&&buf.join('').trim().length>20){const c=buf.join('\n').trim();out.push({title,content:c,originalContent:c});title=line.trim();buf=[]}else if(re.test(line.trim())&&!buf.join('').trim())title=line.trim();else buf.push(line)}if(buf.join('').trim()){const c=buf.join('\n').trim();out.push({title,content:c,originalContent:c})}return out}
+$('#importBtn').onclick=()=>$('#importModal').classList.add('on');$('#importClose').onclick=()=>$('#importModal').classList.remove('on');
+$('#importGo').onclick=async()=>{let text=$('#pasteInput').value.trim(),file=$('#fileInput').files[0];if(!text&&file)text=await file.text();if(!text)return toast('請選 TXT 或貼上正文');const title=$('#titleInput').value.trim()||(file?file.name.replace(/\.txt$/i,''):'未命名小說');const b={id:uid(),title,source:file?'txt':'paste',createdAt:Date.now(),updatedAt:Date.now(),chapters:split(text),progress:{chapter:0,scrollPx:0},bookmarks:[],crawl:{}};await gas('saveBook',b);$('#importModal').classList.remove('on');await refresh();toast('已加入書櫃')};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.1').catch(()=>{});
+const saved=localStorage.getItem('novelV6Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
+</script>
+</body>
+</html>
