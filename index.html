@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.1</title>
+<title>私藏書閣 V6.2</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -56,16 +56,14 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 </style>
 </head>
 <body>
-<iframe id="bridge" class="bridge"></iframe>
-
 <section id="setup" class="setup">
- <div class="setup-card"><h2>私藏書閣 V6.1</h2><p>第一次只要設定一次 GAS 後端網址。貼上你 Apps Script「網頁應用程式」的 <b>/exec</b> 網址；之後會記在這台裝置。</p>
+ <div class="setup-card"><h2>私藏書閣 V6.2</h2><p>第一次只要設定一次 GAS API 網址。貼上 Apps Script「網頁應用程式」的 <b>/exec</b> 網址。V6.2 不再使用 iframe Bridge。</p>
  <input id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
- <button class="btn dark" id="connect">連接我的雲端書櫃</button><div id="setupMsg" style="margin-top:12px;color:#8f857b"></div></div>
+ <button class="btn dark" id="connect">連接我的雲端書櫃</button><div style="margin-top:10px;font-size:12px;color:#8f857b">V6.2 使用 JSONP + POST API，不再依賴 iframe / google.script.run。</div><div id="setupMsg" style="margin-top:12px;color:#8f857b"></div></div>
 </section>
 
 <main class="app">
- <header class="header"><div class="brand"><div class="mark">書</div><div><h1>私藏書閣</h1><small>V6.1 · 私人雲端閱讀器</small></div></div><div class="actions"><button class="btn" id="sync">↻</button><button class="btn dark" id="importBtn">＋ 匯入</button></div></header>
+ <header class="header"><div class="brand"><div class="mark">書</div><div><h1>私藏書閣</h1><small>V6.2 · 私人雲端閱讀器</small></div></div><div class="actions"><button class="btn" id="sync">↻</button><button class="btn dark" id="importBtn">＋ 匯入</button></div></header>
  <section class="hero"><h2>你的小說，換個裝置也能接著看。</h2><p>Google Drive 雲端書櫃、閱讀進度、書籤與閱讀設定同步。手機加入主畫面後會以獨立 App 模式開啟。</p></section>
  <div class="section-title"><div><h3>我的書櫃</h3><small id="count">等待連線</small></div><button class="btn" id="changeBackend">後端設定</button></div>
  <section id="books" class="grid"><div class="empty">正在準備書櫃…</div></section>
@@ -105,7 +103,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-let bridgeReady=false,pending=new Map(),seq=0,shelf=[],book=null,ci=0,pt=null,st=null,speaking=false;
+let shelf=[],book=null,ci=0,pt=null,st=null,speaking=false;
 let cfg={fontSize:20,lineHeight:1.9,letterSpacing:.01,sideMargin:26,turnMode:'horizontal',readerBg:'#f6f1e9',readerText:'#211e1a',themeName:'米白'};
 const themes=[
  ['純白','#fff','#202020'],['米白','#f6f1e9','#211e1a'],['暖灰','#e8e5df','#282622'],['奶茶','#ded2bf','#2d2923'],
@@ -115,12 +113,77 @@ const themes=[
 const esc=s=>(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function toast(s){$('#toast').textContent=s;$('#toast').classList.add('on');setTimeout(()=>$('#toast').classList.remove('on'),1700)}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-function gas(fn,...args){return new Promise((ok,no)=>{if(!bridgeReady)return no(new Error('雲端橋接尚未連線'));const id='c'+(++seq);pending.set(id,{ok,no});$('#bridge').contentWindow.postMessage({type:'NOVEL_V6_CALL',id,fn,args},'*');setTimeout(()=>{if(pending.has(id)){pending.delete(id);no(new Error('雲端回應逾時'))}},30000)})}
-window.addEventListener('message',e=>{const m=e.data||{};if(e.source!==$('#bridge').contentWindow)return;if(m.type==='NOVEL_V6_READY'){bridgeReady=true;$('#setupMsg').textContent='雲端已連線';bootCloud()}if(m.type==='NOVEL_V6_RESULT'&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.ok?p.ok(m.result):p.no(new Error(m.error||'雲端錯誤'))}});
-function connect(url){url=(url||'').trim().replace(/\?.*$/,'');if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url)){ $('#setupMsg').textContent='請貼 Apps Script 部署後的 /exec 網址';return}localStorage.setItem('novelV6Gas',url);bridgeReady=false;$('#bridge').src=url+'?bridge=1&v='+Date.now()}
-$('#connect').onclick=()=>connect($('#gasUrl').value);$('#changeBackend').onclick=()=>{$('#setup').classList.remove('hidden');$('#gasUrl').value=localStorage.getItem('novelV6Gas')||''}
-async function bootCloud(){try{const h=await gas('healthCheck');if(!h?.ok)throw new Error(h?.error||'連線失敗');try{cfg={...cfg,...await gas('loadReaderSettings')}catch{}applyCfg(false);$('#setup').classList.add('hidden');await refresh()}catch(e){$('#setupMsg').textContent=e.message}}
-async function refresh(){try{$('#count').textContent='同步中…';shelf=await gas('listBooks')||[];renderBooks()}catch(e){$('#count').textContent='同步失敗';$('#books').innerHTML='<div class="empty">'+esc(e.message)+'</div>'}}
+function apiBase(){return (localStorage.getItem('novelV62Gas')||'').replace(/\?.*$/,'')}
+
+function apiGet(action,params={}){
+ return new Promise((resolve,reject)=>{
+   const base=apiBase();
+   if(!base)return reject(new Error('尚未設定 GAS API 網址'));
+   const cb='__novel_cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+   const script=document.createElement('script');
+   const timer=setTimeout(()=>finish(new Error('GAS API 讀取逾時')),15000);
+
+   function finish(err,data){
+     clearTimeout(timer);
+     try{delete window[cb]}catch{}
+     script.remove();
+     err?reject(err):resolve(data);
+   }
+
+   window[cb]=payload=>{
+     if(!payload || payload.ok!==true)return finish(new Error(payload?.error||'GAS API 回傳錯誤'));
+     finish(null,payload.result);
+   };
+
+   const q=new URLSearchParams({action,callback:cb,...Object.fromEntries(Object.entries(params).map(([k,v])=>[k,String(v)]))});
+   script.src=base+'?'+q.toString();
+   script.onerror=()=>finish(new Error('無法載入 GAS API。請確認部署存取權允許從 GitHub Pages 呼叫。'));
+   document.head.appendChild(script);
+ });
+}
+
+async function apiPost(action,params={}){
+ const base=apiBase();
+ if(!base)throw new Error('尚未設定 GAS API 網址');
+ const body=new URLSearchParams({action,...Object.fromEntries(Object.entries(params).map(([k,v])=>[k,String(v)]))});
+ try{
+   await fetch(base,{
+     method:'POST',
+     mode:'no-cors',
+     body
+   });
+   // no-cors response is opaque; small delay lets GAS finish writing before a follow-up read.
+   await new Promise(r=>setTimeout(r,350));
+   return true;
+ }catch(e){
+   throw new Error('GAS API 寫入失敗：'+e.message);
+ }
+}
+
+async function connect(url){
+ url=(url||'').trim().replace(/\?.*$/,'');
+ if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url)){
+   $('#setupMsg').textContent='請貼 Apps Script 部署後的 /exec 網址';
+   return;
+ }
+ localStorage.setItem('novelV62Gas',url);
+ $('#setupMsg').textContent='正在測試 GAS API…';
+ try{
+   const h=await apiGet('healthCheck');
+   if(!h?.ok)throw new Error(h?.error||'healthCheck 失敗');
+   $('#setupMsg').textContent='✓ GAS API 已連線';
+   try{cfg={...cfg,...await apiGet('loadReaderSettings')}catch{}
+   applyCfg(false);
+   $('#setup').classList.add('hidden');
+   await refresh();
+ }catch(e){
+   $('#setupMsg').textContent='✕ '+e.message;
+ }
+}
+$('#connect').onclick=()=>connect($('#gasUrl').value);
+$('#changeBackend').onclick=()=>{$('#setup').classList.remove('hidden');$('#gasUrl').value=apiBase()}
+
+async function refresh(){try{$('#count').textContent='同步中…';shelf=await apiGet('listBooks')||[];renderBooks()}catch(e){$('#count').textContent='同步失敗';$('#books').innerHTML='<div class="empty">'+esc(e.message)+'</div>'}}
 function renderBooks(){$('#count').textContent=shelf.length+' 本小說';$('#books').innerHTML=shelf.length?shelf.map(b=>{const c=Math.min(b.progress?.chapter||0,Math.max(0,b.chapterCount-1)),p=Math.round((c/Math.max(1,b.chapterCount))*100);return `<article class="book"><div class="cover">${esc(b.title.slice(0,20))}</div><h4>${esc(b.title)}</h4><div class="meta">${b.chapterCount} 章 · ${p}%</div><div class="bar"><i style="width:${p}%"></i></div><div class="row"><button class="btn dark" onclick="openBook('${b.id}')">閱讀</button><button class="btn" onclick="exportTxt('${b.id}')">TXT</button></div></article>`}).join(''):'<div class="empty">書櫃目前是空的。</div>'}
 $('#sync').onclick=refresh;
 function applyCfg(save=true){document.documentElement.style.setProperty('--fs',cfg.fontSize+'px');document.documentElement.style.setProperty('--lh',cfg.lineHeight);document.documentElement.style.setProperty('--ls',cfg.letterSpacing+'em');document.documentElement.style.setProperty('--side',cfg.sideMargin+'px');document.documentElement.style.setProperty('--rbg',cfg.readerBg);document.documentElement.style.setProperty('--rt',cfg.readerText);$('#fval').textContent=cfg.fontSize;$('#lval').textContent=Number(cfg.lineHeight).toFixed(2);$('#mval').textContent=cfg.sideMargin;$('#aval').textContent=Number(cfg.letterSpacing).toFixed(2);$('#themeName').textContent=cfg.themeName||'自訂';
@@ -130,7 +193,7 @@ if($('#verticalMode')&&$('#horizontalMode')){
   $('#horizontalMode').style.background=cfg.turnMode==='horizontal'?'#26231f':'#fff';
   $('#horizontalMode').style.color=cfg.turnMode==='horizontal'?'#fff':'#211e1a';
 }
-renderPalette();if(save){clearTimeout(st);st=setTimeout(()=>gas('saveReaderSettings',cfg).catch(()=>{}),500)}}
+renderPalette();if(save){clearTimeout(st);st=setTimeout(()=>apiPost('saveReaderSettings',{payload:JSON.stringify(cfg)}).catch(()=>{}),500)}}
 function renderPalette(){$('#palette').innerHTML=themes.map((t,i)=>`<button class="sw ${cfg.readerBg===t[1]?'sel':''}" style="background:${t[1]}" onclick="theme(${i})"></button>`).join('')}
 window.theme=i=>{const t=themes[i];cfg.readerBg=t[1];cfg.readerText=t[2];cfg.themeName=t[0];applyCfg()}
 function font(d){cfg.fontSize=Math.max(14,Math.min(34,cfg.fontSize+d));applyCfg()}$('#smaller').onclick=()=>font(-1);$('#larger').onclick=()=>font(1);$('#fminus').onclick=()=>font(-1);$('#fplus').onclick=()=>font(1);
@@ -138,10 +201,10 @@ $('#lminus').onclick=()=>{cfg.lineHeight=Math.max(1.4,Math.round((cfg.lineHeight
 $('#mminus').onclick=()=>{cfg.sideMargin=Math.max(14,cfg.sideMargin-2);applyCfg()};$('#mplus').onclick=()=>{cfg.sideMargin=Math.min(60,cfg.sideMargin+2);applyCfg()};
 $('#aminus').onclick=()=>{cfg.letterSpacing=Math.max(0,Math.round((cfg.letterSpacing-.01)*100)/100);applyCfg()};$('#aplus').onclick=()=>{cfg.letterSpacing=Math.min(.12,Math.round((cfg.letterSpacing+.01)*100)/100);applyCfg()};
 $('#verticalMode').onclick=()=>{cfg.turnMode='vertical';applyCfg();toast('已切換：上下滑換章')};$('#horizontalMode').onclick=()=>{cfg.turnMode='horizontal';applyCfg();toast('已切換：左右滑換章')};
-window.openBook=async id=>{toast('載入中…');book=await gas('loadBook',id);book.bookmarks=Array.isArray(book.bookmarks)?book.bookmarks:[];ci=Math.min(book.progress?.chapter||0,book.chapters.length-1);$('#reader').classList.add('on');document.body.style.overflow='hidden';showChapter(false)}
+window.openBook=async id=>{toast('載入中…');book=await apiGet('loadBook',{id:id});book.bookmarks=Array.isArray(book.bookmarks)?book.bookmarks:[];ci=Math.min(book.progress?.chapter||0,book.chapters.length-1);$('#reader').classList.add('on');document.body.style.overflow='hidden';showChapter(false)}
 function showChapter(reset=true){speechSynthesis.cancel();speaking=false;const c=book.chapters[ci];$('#bookName').textContent=book.title;$('#prog').textContent=`第 ${ci+1} / ${book.chapters.length} 章`;$('#kicker').textContent=`第 ${ci+1} 章`;$('#ctitle').textContent=c.title;$('#content').textContent=c.content;$('#prev').disabled=ci===0;$('#next').disabled=ci===book.chapters.length-1;$('#tocList').innerHTML=book.chapters.map((x,i)=>`<button class="tocitem ${i===ci?'now':''}" onclick="go(${i})">${i+1}. ${esc(x.title)}</button>`).join('');renderBms();requestAnimationFrame(()=>$('#scroll').scrollTop=reset?0:(book.progress?.scrollPx||0));updateBm()}
 window.go=i=>{ci=i;$('#toc').classList.remove('on');showChapter(true)}
-async function saveProgress(){if(!book)return;book.progress={chapter:ci,scrollPx:$('#scroll').scrollTop};try{await gas('saveProgress',book.id,ci,book.progress.scrollPx)}catch{}}
+async function saveProgress(){if(!book)return;book.progress={chapter:ci,scrollPx:$('#scroll').scrollTop};try{await apiPost('saveProgress',{id:book.id,chapter:ci,scrollPx:book.progress.scrollPx})}catch{}}
 $('#scroll').addEventListener('scroll',()=>{clearTimeout(pt);pt=setTimeout(saveProgress,450)});
 $('#scroll').addEventListener('click',e=>{if(e.target!==$('#scroll')&&e.target.closest('.article')===null)return;const x=e.clientX/innerWidth;if(x>.24&&x<.76&&!$('#drawer').classList.contains('on'))$('#reader').classList.toggle('clean')});
 
@@ -175,18 +238,18 @@ $('#tocOpen').onclick=()=>$('#toc').classList.add('on');$('#more').onclick=()=>$
 $('#prev').onclick=()=>{if(ci>0){ci--;showChapter(true)}};$('#next').onclick=()=>{if(ci<book.chapters.length-1){ci++;showChapter(true)}};
 $('#leave').onclick=$('#closeBook').onclick=async()=>{await saveProgress();speechSynthesis.cancel();$('#reader').classList.remove('on','clean');document.body.style.overflow='';await refresh()};
 function bmKey(){return ci+':'+Math.round($('#scroll').scrollTop/120)}function curBm(){const k=bmKey();return book.bookmarks.find(x=>x.key===k)}function updateBm(){$('#bookmark').innerHTML=(curBm()?'★':'☆')+'<br><small>書籤</small>'}
-$('#bookmark').onclick=async()=>{const k=bmKey(),i=book.bookmarks.findIndex(x=>x.key===k);if(i>=0){book.bookmarks.splice(i,1);toast('已移除書籤')}else{const c=book.chapters[ci],px=$('#scroll').scrollTop,raw=(c.content||'').replace(/\s+/g,' '),ratio=px/Math.max(1,$('#scroll').scrollHeight-$('#scroll').clientHeight),pos=Math.floor(raw.length*Math.min(1,ratio));book.bookmarks.push({id:uid(),key:k,chapter:ci,scrollPx:px,title:c.title,excerpt:raw.slice(pos,pos+55),createdAt:Date.now()});toast('已加入書籤')}await gas('saveBook',book);updateBm();renderBms()}
+$('#bookmark').onclick=async()=>{const k=bmKey(),i=book.bookmarks.findIndex(x=>x.key===k);if(i>=0){book.bookmarks.splice(i,1);toast('已移除書籤')}else{const c=book.chapters[ci],px=$('#scroll').scrollTop,raw=(c.content||'').replace(/\s+/g,' '),ratio=px/Math.max(1,$('#scroll').scrollHeight-$('#scroll').clientHeight),pos=Math.floor(raw.length*Math.min(1,ratio));book.bookmarks.push({id:uid(),key:k,chapter:ci,scrollPx:px,title:c.title,excerpt:raw.slice(pos,pos+55),createdAt:Date.now()});toast('已加入書籤')}await apiPost('saveBook',{payload:JSON.stringify(book)});updateBm();renderBms()}
 function renderBms(){$('#bmList').innerHTML=book?.bookmarks?.length?[...book.bookmarks].sort((a,b)=>a.chapter-b.chapter||a.scrollPx-b.scrollPx).map(b=>`<button class="bmitem" onclick="jumpBm('${b.id}')"><b>${b.chapter+1}. ${esc(b.title)}</b><small>${esc(b.excerpt||'')}</small></button>`).join(''):'<div class="empty">還沒有書籤。</div>'}
 window.jumpBm=id=>{const b=book.bookmarks.find(x=>x.id===id);if(!b)return;ci=b.chapter;$('#bms').classList.remove('on');showChapter(true);setTimeout(()=>$('#scroll').scrollTop=b.scrollPx||0,80)}
 $('#bmOpen').onclick=()=>{$('#drawer').classList.remove('on');renderBms();$('#bms').classList.add('on')};
 $('#speech').onclick=()=>{if(speaking){speechSynthesis.cancel();speaking=false;$('#speech').innerHTML='▶<br><small>朗讀</small>';return}const c=book.chapters[ci],u=new SpeechSynthesisUtterance(c.title+'。'+c.content);u.lang='zh-TW';u.rate=.95;u.onend=u.onerror=()=>{speaking=false;$('#speech').innerHTML='▶<br><small>朗讀</small>'};speaking=true;$('#speech').innerHTML='■<br><small>停止</small>';speechSynthesis.speak(u)};
-$('#edit').onclick=()=>{const c=book.chapters[ci];$('#drawer').classList.remove('on');$('#editName').textContent=c.title;$('#editText').value=c.content;$('#editor').classList.add('on')};$('#editClose').onclick=()=>$('#editor').classList.remove('on');$('#editSave').onclick=async()=>{book.chapters[ci].content=$('#editText').value;await gas('saveBook',book);$('#editor').classList.remove('on');showChapter(false);toast('已儲存')};$('#restore').onclick=async()=>{const c=book.chapters[ci];if(!c.originalContent)return toast('沒有原文備份');if(confirm('還原本章原文？')){c.content=c.originalContent;$('#editText').value=c.content;await gas('saveBook',book);toast('已還原')}};
-window.exportTxt=async id=>{const b=await gas('loadBook',id),txt=b.chapters.map(c=>c.title+'\n\n'+c.content).join('\n\n\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b.title+'\n\n\n'+txt],{type:'text/plain;charset=utf-8'}));a.download=b.title.replace(/[\\/:*?"<>|]/g,'_')+'.txt';a.click()};
+$('#edit').onclick=()=>{const c=book.chapters[ci];$('#drawer').classList.remove('on');$('#editName').textContent=c.title;$('#editText').value=c.content;$('#editor').classList.add('on')};$('#editClose').onclick=()=>$('#editor').classList.remove('on');$('#editSave').onclick=async()=>{book.chapters[ci].content=$('#editText').value;await apiPost('saveBook',{payload:JSON.stringify(book)});$('#editor').classList.remove('on');showChapter(false);toast('已儲存')};$('#restore').onclick=async()=>{const c=book.chapters[ci];if(!c.originalContent)return toast('沒有原文備份');if(confirm('還原本章原文？')){c.content=c.originalContent;$('#editText').value=c.content;await apiPost('saveBook',{payload:JSON.stringify(book)});toast('已還原')}};
+window.exportTxt=async id=>{const b=await apiGet('loadBook',{id:id}),txt=b.chapters.map(c=>c.title+'\n\n'+c.content).join('\n\n\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b.title+'\n\n\n'+txt],{type:'text/plain;charset=utf-8'}));a.download=b.title.replace(/[\\/:*?"<>|]/g,'_')+'.txt';a.click()};
 function split(text){text=(text||'').replace(/\r\n/g,'\n').trim();const re=/^\s*(?:第\s*[0-9零一二三四五六七八九十百千兩万萬]+\s*[章回節卷篇]|Chapter\s+\d+|楔子|序章|前言|後記|尾聲|番外)[^\n]{0,45}$/i;let out=[],buf=[],title='正文';for(const line of text.split('\n')){if(re.test(line.trim())&&buf.join('').trim().length>20){const c=buf.join('\n').trim();out.push({title,content:c,originalContent:c});title=line.trim();buf=[]}else if(re.test(line.trim())&&!buf.join('').trim())title=line.trim();else buf.push(line)}if(buf.join('').trim()){const c=buf.join('\n').trim();out.push({title,content:c,originalContent:c})}return out}
 $('#importBtn').onclick=()=>$('#importModal').classList.add('on');$('#importClose').onclick=()=>$('#importModal').classList.remove('on');
-$('#importGo').onclick=async()=>{let text=$('#pasteInput').value.trim(),file=$('#fileInput').files[0];if(!text&&file)text=await file.text();if(!text)return toast('請選 TXT 或貼上正文');const title=$('#titleInput').value.trim()||(file?file.name.replace(/\.txt$/i,''):'未命名小說');const b={id:uid(),title,source:file?'txt':'paste',createdAt:Date.now(),updatedAt:Date.now(),chapters:split(text),progress:{chapter:0,scrollPx:0},bookmarks:[],crawl:{}};await gas('saveBook',b);$('#importModal').classList.remove('on');await refresh();toast('已加入書櫃')};
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.1').catch(()=>{});
-const saved=localStorage.getItem('novelV6Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
+$('#importGo').onclick=async()=>{let text=$('#pasteInput').value.trim(),file=$('#fileInput').files[0];if(!text&&file)text=await file.text();if(!text)return toast('請選 TXT 或貼上正文');const title=$('#titleInput').value.trim()||(file?file.name.replace(/\.txt$/i,''):'未命名小說');const b={id:uid(),title,source:file?'txt':'paste',createdAt:Date.now(),updatedAt:Date.now(),chapters:split(text),progress:{chapter:0,scrollPx:0},bookmarks:[],crawl:{}};await apiPost('saveBook',{payload:JSON.stringify(b)});$('#importModal').classList.remove('on');await refresh();toast('已加入書櫃')};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.2').catch(()=>{});
+const saved=localStorage.getItem('novelV62Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
 </script>
 </body>
 </html>
