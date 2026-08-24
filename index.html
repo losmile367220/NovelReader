@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.2</title>
+<title>私藏書閣 V6.2.1</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -57,9 +57,9 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 </head>
 <body>
 <section id="setup" class="setup">
- <div class="setup-card"><h2>私藏書閣 V6.2</h2><p>第一次只要設定一次 GAS API 網址。貼上 Apps Script「網頁應用程式」的 <b>/exec</b> 網址。V6.2 不再使用 iframe Bridge。</p>
+ <div class="setup-card"><h2>私藏書閣 V6.2.1</h2><p>第一次只要設定一次 GAS API 網址。貼上 Apps Script「網頁應用程式」的 <b>/exec</b> 網址。V6.2 不再使用 iframe Bridge。</p>
  <input id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
- <button class="btn dark" id="connect">連接我的雲端書櫃</button><div style="margin-top:10px;font-size:12px;color:#8f857b">V6.2 使用 JSONP + POST API，不再依賴 iframe / google.script.run。</div><div id="setupMsg" style="margin-top:12px;color:#8f857b"></div></div>
+ <button class="btn dark" id="connect">連接我的雲端書櫃</button><div style="margin-top:10px;font-size:12px;color:#8f857b">V6.2.1 使用 JSONP + POST API，不再依賴 iframe / google.script.run。</div><div id="setupMsg" style="margin-top:12px;color:#8f857b"></div></div>
 </section>
 
 <main class="app">
@@ -172,7 +172,7 @@ async function connect(url){
    const h=await apiGet('healthCheck');
    if(!h?.ok)throw new Error(h?.error||'healthCheck 失敗');
    $('#setupMsg').textContent='✓ GAS API 已連線';
-   try{cfg={...cfg,...await apiGet('loadReaderSettings')}catch{}
+   try{cfg={...cfg,...await apiGet('loadReaderSettings')}}catch{}
    applyCfg(false);
    $('#setup').classList.add('hidden');
    await refresh();
@@ -248,7 +248,7 @@ window.exportTxt=async id=>{const b=await apiGet('loadBook',{id:id}),txt=b.chapt
 function split(text){text=(text||'').replace(/\r\n/g,'\n').trim();const re=/^\s*(?:第\s*[0-9零一二三四五六七八九十百千兩万萬]+\s*[章回節卷篇]|Chapter\s+\d+|楔子|序章|前言|後記|尾聲|番外)[^\n]{0,45}$/i;let out=[],buf=[],title='正文';for(const line of text.split('\n')){if(re.test(line.trim())&&buf.join('').trim().length>20){const c=buf.join('\n').trim();out.push({title,content:c,originalContent:c});title=line.trim();buf=[]}else if(re.test(line.trim())&&!buf.join('').trim())title=line.trim();else buf.push(line)}if(buf.join('').trim()){const c=buf.join('\n').trim();out.push({title,content:c,originalContent:c})}return out}
 $('#importBtn').onclick=()=>$('#importModal').classList.add('on');$('#importClose').onclick=()=>$('#importModal').classList.remove('on');
 $('#importGo').onclick=async()=>{let text=$('#pasteInput').value.trim(),file=$('#fileInput').files[0];if(!text&&file)text=await file.text();if(!text)return toast('請選 TXT 或貼上正文');const title=$('#titleInput').value.trim()||(file?file.name.replace(/\.txt$/i,''):'未命名小說');const b={id:uid(),title,source:file?'txt':'paste',createdAt:Date.now(),updatedAt:Date.now(),chapters:split(text),progress:{chapter:0,scrollPx:0},bookmarks:[],crawl:{}};await apiPost('saveBook',{payload:JSON.stringify(b)});$('#importModal').classList.remove('on');await refresh();toast('已加入書櫃')};
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.2').catch(()=>{});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.2.1').catch(()=>{});
 const saved=localStorage.getItem('novelV62Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
 </script>
 </body>
