@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.5</title>
+<title>私藏書閣 V6.5.1</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -99,9 +99,9 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 </head>
 <body>
 <section id="setup" class="setup">
- <div class="setup-card"><h2>私藏書閣 V6.5</h2><p>第一次只要設定一次 GAS API 網址。貼上 Apps Script「網頁應用程式」的 <b>/exec</b> 網址。V6.2 不再使用 iframe Bridge。</p>
+ <div class="setup-card"><h2>私藏書閣 V6.5.1</h2><p>第一次只要設定一次 GAS API 網址。貼上 Apps Script「網頁應用程式」的 <b>/exec</b> 網址。V6.2 不再使用 iframe Bridge。</p>
  <input id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
- <button class="btn dark" id="connect">連接我的雲端書櫃</button><div style="margin-top:10px;font-size:12px;color:#8f857b">V6.5 使用 JSONP + POST API，不再依賴 iframe / google.script.run。</div><div id="setupMsg" style="margin-top:12px;color:#8f857b"></div></div>
+ <button class="btn dark" id="connect">連接我的雲端書櫃</button><div style="margin-top:10px;font-size:12px;color:#8f857b">V6.5.1 使用 JSONP + POST API，不再依賴 iframe / google.script.run。</div><div id="setupMsg" style="margin-top:12px;color:#8f857b"></div></div>
 </section>
 
 <main class="app">
@@ -691,10 +691,26 @@ window.continueBook=async id=>{
  }catch(e){toast('續抓停止：'+e.message)}finally{crawling=false}
 }
 function appendPagesV63(b,pages){
- const norm=t=>(t||'正文').replace(/\s*[（(]?\s*\d+\s*\/\s*\d+\s*[）)]?\s*$/,'').trim();
- const groups=[];
- for(const p of pages){const title=norm(p.chapterTitle||p.title||'正文'),last=groups[groups.length-1];if(last&&last.title===title){last.content+='\\n\\n'+p.text;last.originalContent=last.content}else groups.push({title,content:p.text,originalContent:p.text})}
- for(const nc of groups){const last=b.chapters[b.chapters.length-1];if(last&&norm(last.title)===norm(nc.title)){last.content+='\\n\\n'+nc.content;last.originalContent=(last.originalContent||'')+'\\n\\n'+nc.originalContent}else b.chapters.push(nc)}
+  for(const p of pages){
+    const rawTitle=(p.chapterTitle||p.title||'正文').trim();
+    const content=(p.text||'').trim();
+    if(!content)continue;
+
+    const last=b.chapters[b.chapters.length-1];
+
+    // 只有「標題完全相同」才合併。
+    // (1/2) 與 (2/2) 會保留成兩個獨立閱讀單位。
+    if(last && last.title===rawTitle){
+      last.content += (last.content ? '\n\n' : '') + content;
+      last.originalContent = (last.originalContent||'') + (last.originalContent ? '\n\n' : '') + content;
+    }else{
+      b.chapters.push({
+        title:rawTitle,
+        content:content,
+        originalContent:content
+      });
+    }
+  }
 }
 
 window.exportTxt=async id=>{const b=await apiGet('loadBook',{id:id}),txt=b.chapters.map(c=>c.title+'\n\n'+c.content).join('\n\n\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b.title+'\n\n\n'+txt],{type:'text/plain;charset=utf-8'}));a.download=b.title.replace(/[\\/:*?"<>|]/g,'_')+'.txt';a.click()};
@@ -842,7 +858,7 @@ $('#urlImportGo').onclick=async()=>{
  }
 };
 
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.5').catch(()=>{});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.5.1').catch(()=>{});
 const saved=localStorage.getItem('novelV62Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
 </script>
 </body>
