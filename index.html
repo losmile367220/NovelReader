@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.5.7.1</title>
+<title>私藏書閣 V6.5.8</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -254,7 +254,7 @@ let idbPromise=null;
 function openNovelDB(){
  if(idbPromise)return idbPromise;
  idbPromise=new Promise((resolve,reject)=>{
-  const req=indexedDB.open('PrivateNovelReaderV657_PROD',1);
+  const req=indexedDB.open('PrivateNovelReaderV658_PROD',1);
   req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('books'))db.createObjectStore('books',{keyPath:'id'})};
   req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
  });
@@ -287,7 +287,7 @@ function apiGet(action,params={}){
    if(!base)return reject(new Error('尚未設定 GAS API 網址'));
    const cb='__novel_cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
    const script=document.createElement('script');
-   const timeoutMs=action==='auditLibrary'?60000:action==='loadBook'?90000:action==='listBooks'?30000:15000;
+   const timeoutMs=action==='auditLibrary'?60000:(action==='loadBook'||action==='loadBookPacked')?90000:action==='listBooks'?30000:15000;
    const timer=setTimeout(()=>finish(new Error('GAS API 讀取逾時（'+Math.round(timeoutMs/1000)+' 秒）')),timeoutMs);
 
    function finish(err,data){
@@ -413,6 +413,30 @@ $('#lminus').onclick=()=>{cfg.lineHeight=Math.max(1.4,Math.round((cfg.lineHeight
 $('#mminus').onclick=()=>{cfg.sideMargin=Math.max(14,cfg.sideMargin-2);applyCfg()};$('#mplus').onclick=()=>{cfg.sideMargin=Math.min(60,cfg.sideMargin+2);applyCfg()};
 $('#aminus').onclick=()=>{cfg.letterSpacing=Math.max(0,Math.round((cfg.letterSpacing-.01)*100)/100);applyCfg()};$('#aplus').onclick=()=>{cfg.letterSpacing=Math.min(.12,Math.round((cfg.letterSpacing+.01)*100)/100);applyCfg()};
 $('#verticalMode').onclick=()=>{cfg.turnMode='vertical';applyCfg();toast('已切換：上下滑換章')};$('#horizontalMode').onclick=()=>{cfg.turnMode='horizontal';applyCfg();toast('已切換：左右滑換章')};
+
+// Lightweight transfer for large books; fall back to legacy endpoint when unsupported.
+async function loadBookFast(id){
+ if(!('DecompressionStream' in window)) return apiGet('loadBook',{id});
+ let packet;
+ try{
+   packet=await apiGet('loadBookPacked',{id});
+ }catch(e){
+   // An older GAS deployment may not have the new endpoint. Do not hide other errors.
+   if(/Unknown GET action|Unknown action/.test(String(e.message||'')))return apiGet('loadBook',{id});
+   throw e;
+ }
+ if(packet?.encoding!=='gzip-base64'||typeof packet.data!=='string')throw new Error('雲端傳輸格式不正確');
+ try{
+   const bytes=Uint8Array.from(atob(packet.data),x=>x.charCodeAt(0));
+   const reader=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')).getReader();
+   const parts=[];let total=0;
+   while(true){const {done,value}=await reader.read();if(done)break;parts.push(value);total+=value.byteLength;}
+   const merged=new Uint8Array(total);let offset=0;
+   parts.forEach(x=>{merged.set(x,offset);offset+=x.byteLength});
+   return JSON.parse(new TextDecoder('utf-8').decode(merged));
+ }catch(e){throw new Error('解壓縮雲端小說失敗：'+(e.message||e));}
+}
+
 let openingBookId=null;
 window.openBook=async id=>{
  openingBookId=id;
@@ -436,7 +460,7 @@ window.openBook=async id=>{
    showChapter(false);
  }
  // 首次載入必須將雲端書籍指定給 book，而非只存入本機快取。
- apiGet('loadBook',{id}).then(async latest=>{
+ loadBookFast(id).then(async latest=>{
    if(openingBookId!==id)return;
    if(!latest || !Array.isArray(latest.chapters) || !latest.chapters.length)
      throw new Error('雲端書籍沒有可閱讀的章節');
@@ -1083,7 +1107,7 @@ $('#recoverShelfBtn').onclick=async()=>{
    await refresh();alert(`已確認加入 ${missing.length} 本缺漏的小說，請確認書櫃清單。`);
  }catch(e){alert('檢查／復原暫停：'+e.message)}finally{btn.disabled=false}
 };
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.5.7.1').catch(()=>{});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.5.8').catch(()=>{});
 const saved=localStorage.getItem('novelV657_PROD_Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
 </script>
 </body>
