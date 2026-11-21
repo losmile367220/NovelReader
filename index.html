@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.5.6</title>
+<title>私藏書閣 V6.5.7</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -109,7 +109,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 </head>
 <body>
 <section id="setup" class="setup">
- <div class="setup-card"><h2>私藏書閣 V6.5.6</h2><p>第一次只要設定一次 GAS API 網址。貼上 Apps Script「網頁應用程式」的 <b>/exec</b> 網址。V6.2 不再使用 iframe Bridge。</p>
+ <div class="setup-card"><h2>私藏書閣 V6.5.7</h2><p>第一次只要設定一次 GAS API 網址。貼上 Apps Script「網頁應用程式」的 <b>/exec</b> 網址。V6.2 不再使用 iframe Bridge。</p>
  <input id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
  <button class="btn dark" id="connect">連接我的雲端書櫃</button><div style="margin-top:10px;font-size:12px;color:#8f857b">V6.5.1 使用 JSONP + POST API，不再依賴 iframe / google.script.run。</div><div id="setupMsg" style="margin-top:12px;color:#8f857b"></div></div>
 </section>
@@ -254,7 +254,7 @@ let idbPromise=null;
 function openNovelDB(){
  if(idbPromise)return idbPromise;
  idbPromise=new Promise((resolve,reject)=>{
-  const req=indexedDB.open('PrivateNovelReaderV656_PROD',1);
+  const req=indexedDB.open('PrivateNovelReaderV657_PROD',1);
   req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('books'))db.createObjectStore('books',{keyPath:'id'})};
   req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
  });
@@ -279,7 +279,7 @@ function backgroundSync(promise){
  Promise.resolve(promise).catch(()=>{}).finally(()=>setTimeout(()=>$('#syncDot').classList.remove('on'),250));
 }
 
-function apiBase(){return (localStorage.getItem('novelV656_PROD_Gas')||'').replace(/\?.*$/,'')}
+function apiBase(){return (localStorage.getItem('novelV657_PROD_Gas')||'').replace(/\?.*$/,'')}
 
 function apiGet(action,params={}){
  return new Promise((resolve,reject)=>{
@@ -287,7 +287,8 @@ function apiGet(action,params={}){
    if(!base)return reject(new Error('尚未設定 GAS API 網址'));
    const cb='__novel_cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
    const script=document.createElement('script');
-   const timer=setTimeout(()=>finish(new Error('GAS API 讀取逾時')),15000);
+   const timeoutMs=action==='auditLibrary'?60000:action==='listBooks'?30000:15000;
+   const timer=setTimeout(()=>finish(new Error('GAS API 讀取逾時（'+Math.round(timeoutMs/1000)+' 秒）')),timeoutMs);
 
    function finish(err,data){
      clearTimeout(timer);
@@ -357,7 +358,7 @@ async function connect(url){
    $('#setupMsg').textContent='請貼 Apps Script 部署後的 /exec 網址';
    return;
  }
- localStorage.setItem('novelV656_PROD_Gas',url);
+ localStorage.setItem('novelV657_PROD_Gas',url);
  $('#setupMsg').textContent='正在測試 GAS API…';
  try{
    const h=await apiGet('healthCheck');
@@ -375,11 +376,11 @@ $('#connect').onclick=()=>connect($('#gasUrl').value);
 $('#changeBackend').onclick=()=>{$('#setup').classList.remove('hidden');$('#gasUrl').value=apiBase()}
 
 async function refresh(){
- const cached=localStorage.getItem('novelShelfCacheV656_PROD');
+ const cached=localStorage.getItem('novelShelfCacheV657_PROD');
  if(cached&&!shelf.length){try{shelf=JSON.parse(cached);renderBooks();$('#count').textContent=shelf.length+' 本小說 · 同步中…'}catch{}}
  try{const fresh=await apiGet('listBooks');if(!Array.isArray(fresh))throw new Error('書櫃清單格式錯誤');
    if(fresh.length < shelf.length){$('#count').textContent=`雲端索引 ${fresh.length} 本／本機記錄 ${shelf.length} 本（請先檢查索引）`;toast('發現書櫃索引數量減少，已保留本機清單');return;}
-   shelf=fresh;localStorage.setItem('novelShelfCacheV656_PROD',JSON.stringify(shelf));renderBooks()}
+   shelf=fresh;localStorage.setItem('novelShelfCacheV657_PROD',JSON.stringify(shelf));renderBooks()}
 
  catch(e){if(!shelf.length){$('#count').textContent='同步失敗';$('#books').innerHTML='<div class="empty">'+esc(e.message)+'</div>'}else $('#count').textContent=shelf.length+' 本小說 · 雲端稍後重試'}
 }
@@ -720,7 +721,7 @@ window.renameBook=async id=>{
  try{
    const result=await apiGet('renameBook',{id:id,title:title});
    if(!result||result.title!==title)throw new Error('後端沒有回傳更新結果');
-   localStorage.setItem('novelShelfCacheV656_PROD',JSON.stringify(shelf));
+   localStorage.setItem('novelShelfCacheV657_PROD',JSON.stringify(shelf));
    toast('書名已更新');
  }catch(e){
    meta.title=oldTitle;renderBooks();toast('重新命名失敗：'+e.message);
@@ -1041,10 +1042,11 @@ $('#recoverShelfBtn').onclick=async()=>{
  try{
    const audit=await apiGet('auditLibrary');
    const missing=audit.unindexed||[];
-   const detail=`雲端書籍檔案：${audit.fileCount} 本\n索引列出的書籍：${audit.indexedCount} 本\n未列入書櫃的檔案：${missing.length} 本\n無法解析檔案：${(audit.invalid||[]).length} 本`;
-   if(audit.invalid?.length)return alert(detail+'\n\n部分檔案無法解析，已停止重建，請先備份並檢查。');
-   if(!missing.length)return alert(detail+'\n\n沒有發現遺漏的小說索引。');
-   if(!confirm(detail+'\n\n是否先備份 index.json，再把遺漏的小說加入書櫃？\n不會覆蓋小說正文。'))return;
+   const detail=`雲端書籍檔案：${audit.fileCount} 本\n索引列出的書籍：${audit.indexedCount} 本\n未列入書櫃的檔案：${missing.length} 本\n同名資料夾：${audit.folderCount} 個\n（快速檢查尚未解析小說內容）`;
+   if(audit.folderCount!==1)return alert(detail+'\n\n發現多個同名資料夾，先不要復原。請檢查 Google Drive。');
+   
+   if(!missing.length)return alert(detail+'\n\n此資料夾沒有發現未列入索引的檔案。若正式書櫃仍缺書，請確認是否使用正確的資料夾。');
+   if(!confirm(detail+'\n\n確定要先驗證遺漏的小說檔案、備份 index.json，再加入書櫃？\n不會覆蓋小說正文。'))return;
    await apiPost('recoverIndex',{payload:JSON.stringify({previewOnly:false})});
    let found=false;
    for(let n=0;n<10;n++){
@@ -1057,8 +1059,8 @@ $('#recoverShelfBtn').onclick=async()=>{
    await refresh();alert(`已確認加入 ${missing.length} 本缺漏的小說，請確認書櫃清單。`);
  }catch(e){alert('檢查／復原暫停：'+e.message)}finally{btn.disabled=false}
 };
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.5.5').catch(()=>{});
-const saved=localStorage.getItem('novelV656_PROD_Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.5.7').catch(()=>{});
+const saved=localStorage.getItem('novelV657_PROD_Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
 </script>
 </body>
 </html>
