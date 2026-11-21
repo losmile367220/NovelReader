@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.5.3</title>
+<title>私藏書閣 V6.5.6</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -95,11 +95,21 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 .replace-count{display:block;font-size:12px;color:#8d8279;margin-top:3px}
 
 .sync-dot{position:fixed;right:12px;bottom:calc(12px + var(--safe-b));z-index:390;background:#26231f;color:#fff;border-radius:99px;padding:7px 10px;font-size:11px;opacity:0;transform:translateY(8px);transition:.18s;pointer-events:none}.sync-dot.on{opacity:.82;transform:none}
+ .manage-list{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:8px}
+ .manage-item{padding:10px 6px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:9px}
+ .manage-item:last-child{border:0}.manage-item input{flex:0 0 auto;width:19px;height:19px;margin:3px 0}
+ .search-result{width:100%;display:block;text-align:left;border:0;border-bottom:1px solid var(--line);padding:12px;background:transparent;color:var(--ink)}
+ .search-result small{display:block;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}
+ .search-result mark, .content mark.novel-search-hit {background:#ffe28a;color:#252015;border-radius:3px;padding:0 1px}
+ .content mark.novel-search-hit {outline:1px solid #ddae42}
+ .search-options{align-items:center;gap:12px}.search-options label{display:flex;gap:5px;align-items:center;font-size:13px}.search-options input{width:auto;margin:0}
+ .search-options button{flex:0 0 auto}
+ .utility-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.utility-row .btn{flex:1}
 </style>
 </head>
 <body>
 <section id="setup" class="setup">
- <div class="setup-card"><h2>私藏書閣 V6.5.3</h2><p>第一次只要設定一次 GAS API 網址。貼上 Apps Script「網頁應用程式」的 <b>/exec</b> 網址。V6.2 不再使用 iframe Bridge。</p>
+ <div class="setup-card"><h2>私藏書閣 V6.5.6</h2><p>第一次只要設定一次 GAS API 網址。貼上 Apps Script「網頁應用程式」的 <b>/exec</b> 網址。V6.2 不再使用 iframe Bridge。</p>
  <input id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
  <button class="btn dark" id="connect">連接我的雲端書櫃</button><div style="margin-top:10px;font-size:12px;color:#8f857b">V6.5.1 使用 JSONP + POST API，不再依賴 iframe / google.script.run。</div><div id="setupMsg" style="margin-top:12px;color:#8f857b"></div></div>
 </section>
@@ -107,7 +117,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 <main class="app">
  <header class="header"><div class="brand"><div class="mark">書</div><div><h1>私藏書閣</h1><small>V6.2 · 私人雲端閱讀器</small></div></div><div class="actions"><button class="btn" id="sync">↻</button><button class="btn dark" id="importBtn">＋ 匯入</button></div></header>
  <section class="hero"><h2>你的小說，換個裝置也能接著看。</h2><p>Google Drive 雲端書櫃、閱讀進度、書籤與閱讀設定同步。手機加入主畫面後會以獨立 App 模式開啟。</p></section>
- <div class="section-title"><div><h3>我的書櫃</h3><small id="count">等待連線</small></div><button class="btn" id="changeBackend">後端設定</button></div>
+ <div class="section-title"><div><h3>我的書櫃</h3><small id="count">等待連線</small></div><div class="actions"><button class="btn" id="recoverShelfBtn">檢查／找回書籍</button><button class="btn" id="changeBackend">後端設定</button></div></div>
  <section id="books" class="grid"><div class="empty">正在準備書櫃…</div></section>
 </main>
 
@@ -135,7 +145,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
    <div class="srow"><span>翻章方式</span><div class="step"><button id="verticalMode" style="width:auto;padding:0 12px">上下滑</button><button id="horizontalMode" style="width:auto;padding:0 12px">左右滑</button></div></div>
   </div>
   <div class="setting"><b>背景顏色</b><div id="palette" class="palette"></div><small id="themeName" style="color:#8f857b"></small></div>
-  <div class="setting"><div class="sheet-actions"><button class="btn" id="bmOpen">🔖 書籤列表</button><button class="btn" id="edit">✎ 編輯本章</button><button class="btn" id="replaceSelectedBtn">替換選取文字</button><button class="btn" id="closeBook">回到書櫃</button><button class="btn" id="tocFromSettings">章節目錄</button></div></div>
+  <div class="setting"><div class="sheet-actions"><button class="btn" id="bmOpen">🔖 書籤列表</button><button class="btn" id="edit">✎ 編輯本章</button><button class="btn" id="replaceSelectedBtn">替換選取文字</button><button class="btn" id="closeBook">回到書櫃</button><button class="btn" id="tocFromSettings">章節目錄</button><button class="btn" id="searchContentBtn">🔎 搜尋內容</button><button class="btn" id="manageChaptersBtn">管理／刪除章節</button></div></div>
  </section>
  <section id="speechSheet" class="speech-sheet">
   <div class="handle"></div>
@@ -209,6 +219,22 @@ button,input,textarea{font:inherit}button{cursor:pointer}
   <button class="btn dark" id="pasteImportGo">加入雲端書櫃</button>
  </div>
 </div></div>
+<div id="contentSearchModal" class="modal"><div class="modalbox">
+ <div class="panelhead"><h3>🔎 搜尋小說內容</h3><button class="btn" id="searchContentClose">✕</button></div>
+ <input id="contentSearchInput" placeholder="搜尋章節標題或小說正文，例如：蘇暖暖" autocomplete="off" maxlength="100">
+ <div class="utility-row search-options"><label><input type="checkbox" id="searchTitles" checked> 章名</label><label><input type="checkbox" id="searchBodies" checked> 正文</label><button class="btn" id="searchClear" type="button">清除</button></div>
+ <div class="meta" id="contentSearchSummary">搜尋目前開啟的小說</div>
+ <div class="manage-list" id="contentSearchResults" style="margin-top:12px"></div>
+</div></div>
+<div id="chapterManageModal" class="modal"><div class="modalbox">
+ <div class="panelhead"><h3>管理／刪除章節</h3><button class="btn" id="chapterManageClose">✕</button></div>
+ <div class="meta">勾選要刪除的章節。刪除前會在 Google Drive 建立整本書備份。</div>
+ <input id="chapterFilter" placeholder="篩選章節名稱或編號">
+ <div class="utility-row"><button class="btn" id="selectVisibleChapters">勾選篩選結果</button><button class="btn" id="clearChapterSelection">清除勾選</button></div>
+ <div class="manage-list" id="chapterManageList" style="margin-top:12px"></div>
+ <div class="utility-row"><button class="btn" id="previewChapterDelete">預覽刪除</button><button class="btn dark" id="commitChapterDelete">確認刪除選取章節</button></div>
+ <div class="meta" id="chapterDeleteStatus" style="margin-top:10px"></div>
+</div></div>
 <div id="syncDot" class="sync-dot">雲端同步中</div><div id="toast" class="toast"></div>
 
 <script>
@@ -228,7 +254,7 @@ let idbPromise=null;
 function openNovelDB(){
  if(idbPromise)return idbPromise;
  idbPromise=new Promise((resolve,reject)=>{
-  const req=indexedDB.open('PrivateNovelReaderV65',1);
+  const req=indexedDB.open('PrivateNovelReaderV656_PROD',1);
   req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('books'))db.createObjectStore('books',{keyPath:'id'})};
   req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
  });
@@ -253,7 +279,7 @@ function backgroundSync(promise){
  Promise.resolve(promise).catch(()=>{}).finally(()=>setTimeout(()=>$('#syncDot').classList.remove('on'),250));
 }
 
-function apiBase(){return (localStorage.getItem('novelV62Gas')||'').replace(/\?.*$/,'')}
+function apiBase(){return (localStorage.getItem('novelV656_PROD_Gas')||'').replace(/\?.*$/,'')}
 
 function apiGet(action,params={}){
  return new Promise((resolve,reject)=>{
@@ -300,13 +326,38 @@ async function apiPost(action,params={}){
  }
 }
 
+function editToken(){return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,12)}
+async function editAndVerify(action,payload){
+ // POST is opaque on GitHub Pages: only a matching server-side receipt is proof of success.
+ const token=editToken(); payload={...payload,token,previewOnly:false};
+ const started=performance.now();
+ await apiPost(action,{payload:JSON.stringify(payload)});
+ let lastError='';
+ for(let i=0;i<9;i++){
+   if(i)await new Promise(r=>setTimeout(r,Math.min(280+i*260,1500)));
+   try{
+     const r=await apiGet('editStatus',{id:payload.id,token});
+     if(r?.confirmed)return {...r,elapsedMs:Math.round(performance.now()-started)};
+   }catch(e){lastError=e.message}
+ }
+ throw new Error('無法確認雲端修改是否成功；請重新開啟小說檢查後再操作。'+(lastError?' '+lastError:''));
+}
+async function reloadCurrentBook(){
+ const b=await apiGet('loadBook',{id:book.id});
+ if(!b||!Array.isArray(b.chapters))throw new Error('雲端回傳的小說資料無效');
+ book=b;book.bookmarks=Array.isArray(b.bookmarks)?b.bookmarks:[];
+ ci=Math.max(0,Math.min(ci,b.chapters.length-1));
+ await cacheBookLocal(book);showChapter(false);
+ // Shelf metadata is unchanged by a text-only edit, so no full refresh is needed.
+}
+
 async function connect(url){
  url=(url||'').trim().replace(/\?.*$/,'');
  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url)){
    $('#setupMsg').textContent='請貼 Apps Script 部署後的 /exec 網址';
    return;
  }
- localStorage.setItem('novelV62Gas',url);
+ localStorage.setItem('novelV656_PROD_Gas',url);
  $('#setupMsg').textContent='正在測試 GAS API…';
  try{
    const h=await apiGet('healthCheck');
@@ -324,9 +375,12 @@ $('#connect').onclick=()=>connect($('#gasUrl').value);
 $('#changeBackend').onclick=()=>{$('#setup').classList.remove('hidden');$('#gasUrl').value=apiBase()}
 
 async function refresh(){
- const cached=localStorage.getItem('novelShelfCacheV63');
+ const cached=localStorage.getItem('novelShelfCacheV656_PROD');
  if(cached&&!shelf.length){try{shelf=JSON.parse(cached);renderBooks();$('#count').textContent=shelf.length+' 本小說 · 同步中…'}catch{}}
- try{const fresh=await apiGet('listBooks');shelf=fresh||[];localStorage.setItem('novelShelfCacheV63',JSON.stringify(shelf));renderBooks()}
+ try{const fresh=await apiGet('listBooks');if(!Array.isArray(fresh))throw new Error('書櫃清單格式錯誤');
+   if(fresh.length < shelf.length){$('#count').textContent=`雲端索引 ${fresh.length} 本／本機記錄 ${shelf.length} 本（請先檢查索引）`;toast('發現書櫃索引數量減少，已保留本機清單');return;}
+   shelf=fresh;localStorage.setItem('novelShelfCacheV656_PROD',JSON.stringify(shelf));renderBooks()}
+
  catch(e){if(!shelf.length){$('#count').textContent='同步失敗';$('#books').innerHTML='<div class="empty">'+esc(e.message)+'</div>'}else $('#count').textContent=shelf.length+' 本小說 · 雲端稍後重試'}
 }
 function renderBooks(){$('#count').textContent=shelf.length+' 本小說';$('#books').innerHTML=shelf.length?shelf.map(b=>{const c=Math.min(b.progress?.chapter||0,Math.max(0,b.chapterCount-1)),p=Math.round((c/Math.max(1,b.chapterCount))*100);return `<article class="book">
@@ -451,11 +505,16 @@ function getSelectedTextInfo(){
  const startP=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer;
  const p=startP?.closest?.('#content p');
  if(!p)return null;
+ const endNode=range.endContainer.nodeType===3?range.endContainer.parentElement:range.endContainer;
+ if(endNode?.closest?.('#content p')!==p)return null;
 
  return {
    text:text,
    paragraph:Number(p.dataset.p||0),
-   selectedText:text
+    selectedText:text,
+    startInParagraph:(()=>{const pre=range.cloneRange();pre.selectNodeContents(p);pre.setEnd(range.startContainer,range.startOffset);return pre.toString().length})(),
+    chapterIndex:ci,
+    bookId:book.id
  };
 }
 function showSelectionReplaceButton(){
@@ -556,36 +615,43 @@ function replaceOnceInChapter(content,needle,replacement,paragraphIndex){
  return {content,count:0};
 }
 
-async function performReplace(scope){
- if(!book||!replaceSelection?.text)return;
- const oldText=replaceSelection.text;
- const newText=$('#replaceNew').value;
- const snap=snapshotBook(scope);
- let count=0;
-
- if(scope==='here'){
-   const ch=currentChapterObj();
-   const r=replaceOnceInChapter(ch.content,oldText,newText,replaceSelection.paragraph);
-   ch.content=r.content;count=r.count;
- }else if(scope==='chapter'){
-   const ch=currentChapterObj();
-   count=countOccurrences(ch.content,oldText);
-   if(count>0)ch.content=ch.content.split(oldText).join(newText);
- }else{
-   count=book.chapters.reduce((n,c)=>n+countOccurrences(c.content,oldText),0);
-   if(count>0){
-     if(!confirm(`全文會修改 ${count} 處「${oldText}」。確定繼續？`))return;
-     book.chapters.forEach(c=>{c.content=c.content.split(oldText).join(newText)});
-   }
+function selectionAbsoluteOffset(info){
+ const raw=String(currentChapterObj()?.content||'');
+ const re=/[^\n]+/g;let m,number=-1;
+ while((m=re.exec(raw))!==null){
+   if(!m[0].trim())continue;
+   number++;
+   if(number!==info.paragraph)continue;
+   const whitespace=m[0].length-m[0].trimStart().length;
+   const offset=m.index+whitespace+info.startInParagraph;
+   if(raw.slice(offset,offset+info.text.length)===info.text)return offset;
+   return -1;
  }
-
+ return -1;
+}
+let editorBusy=false;
+async function performReplace(scope){
+ if(editorBusy||!book||!replaceSelection?.text)return;
+ if(replaceSelection.bookId!==book.id||replaceSelection.chapterIndex!==ci)
+   return toast('章節已切換，請重新選取文字');
+ const oldText=replaceSelection.text,newText=$('#replaceNew').value;
+ const count=scope==='here'?1:scope==='chapter'?countOccurrences(currentChapterObj()?.content||'',oldText):book.chapters.reduce((n,c)=>n+countOccurrences(c.content||'',oldText),0);
  if(!count)return toast('沒有找到可替換的位置');
-
- pushUndo(snap,`已修改 ${count} 處`);
- $('#replaceSheet').classList.remove('on');
- showChapter(false);
- persistBookOptimistic();
- toast(`已修改 ${count} 處`);
+ if(scope==='all'&&!confirm(`全文將替換 ${count} 處，是否繼續？`))return;
+ const offset=scope==='here'?selectionAbsoluteOffset(replaceSelection):undefined;
+ if(scope==='here'&&offset<0)return alert('選取位置與原始文字不一致，請重新選取後再試。');
+ const payload={id:book.id,expectedUpdatedAt:book.updatedAt,chapterIndex:scope==='all'?'all':ci,
+   find:oldText,replacement:newText,mode:scope,fields:'content',...(scope==='here'?{offset}:{})};
+ editorBusy=true;$('#replaceInfo').textContent='正在備份並確認雲端寫入，請勿重複操作…';
+ try{
+   const receipt=await editAndVerify('replaceText',payload);
+   await reloadCurrentBook();
+   $('#replaceInfo').textContent=`雲端已確認（約 ${(receipt.elapsedMs/1000).toFixed(1)} 秒）；修改前備份已保留。`;
+   $('#replaceSheet').classList.remove('on');
+   $('#undoBanner').classList.remove('on');
+   toast(`雲端已確認替換 ${count} 處`);
+ }catch(e){alert('替換尚未確認完成：'+e.message+'\n請勿立即重複提交。');}
+ finally{editorBusy=false;updateReplaceCounts()}
 }
 
 $('#replaceHere').onclick=()=>performReplace('here');
@@ -654,7 +720,7 @@ window.renameBook=async id=>{
  try{
    const result=await apiGet('renameBook',{id:id,title:title});
    if(!result||result.title!==title)throw new Error('後端沒有回傳更新結果');
-   localStorage.setItem('novelShelfCacheV63',JSON.stringify(shelf));
+   localStorage.setItem('novelShelfCacheV656_PROD',JSON.stringify(shelf));
    toast('書名已更新');
  }catch(e){
    meta.title=oldTitle;renderBooks();toast('重新命名失敗：'+e.message);
@@ -866,8 +932,133 @@ $('#urlImportGo').onclick=async()=>{
  }
 };
 
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.5.3').catch(()=>{});
-const saved=localStorage.getItem('novelV62Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
+
+// ===== V6.5.6: 搜尋章名/正文、摘要高亮、精準跳轉 =====
+let selectedForDeletion=new Set();
+let searchTimer, activeSearchTerm='', searchMatches=[];
+$('#searchContentBtn').onclick=()=>{ $('#drawer').classList.remove('on');$('#contentSearchModal').classList.add('on');$('#contentSearchInput').focus();renderContentSearch(); };
+$('#searchContentClose').onclick=()=>$('#contentSearchModal').classList.remove('on');
+$('#searchClear').onclick=()=>{$('#contentSearchInput').value='';renderContentSearch();$('#contentSearchInput').focus()};
+$('#contentSearchInput').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(renderContentSearch,240)});
+$('#searchTitles').onchange=renderContentSearch;
+$('#searchBodies').onchange=renderContentSearch;
+function highlightSearchExcerpt(s,q){
+ const re=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
+ let out='',last=0,m;
+ while((m=re.exec(s))!==null){out+=esc(s.slice(last,m.index))+'<mark>'+esc(m[0])+'</mark>';last=m.index+m[0].length;if(!m[0].length)break;}
+ return out+esc(s.slice(last));
+}
+function renderContentSearch(){
+ const raw=$('#contentSearchInput').value.trim(),term=raw.toLocaleLowerCase();
+ const includeTitle=$('#searchTitles').checked,includeBody=$('#searchBodies').checked;
+ const results=$('#contentSearchResults'),summary=$('#contentSearchSummary');
+ searchMatches=[];activeSearchTerm=raw;
+ if(!book||!term){results.innerHTML='';summary.textContent='輸入關鍵字後搜尋目前這本小說';return}
+ if(!includeTitle&&!includeBody){results.innerHTML='';summary.textContent='請至少勾選章名或正文';return}
+ let total=0,matchedChapters=0;
+ const MAX_RESULTS=180,MAX_PER_CHAPTER=12;
+ book.chapters.forEach((ch,index)=>{
+   let found=false;
+   const title=String(ch.title||''),body=String(ch.content||'');
+   const ti=includeTitle?title.toLocaleLowerCase().indexOf(term):-1;
+   if(ti>=0){total++;found=true;if(searchMatches.length<MAX_RESULTS)searchMatches.push({index,title,offset:-1,excerpt:title,kind:'章名'})}
+   if(includeBody){
+     const lower=body.toLocaleLowerCase();let pos=0,count=0;
+     while((pos=lower.indexOf(term,pos))>=0){
+       total++;found=true;
+       if(searchMatches.length<MAX_RESULTS&&count<MAX_PER_CHAPTER){
+         const begin=Math.max(0,pos-38),finish=Math.min(body.length,pos+raw.length+65);
+         searchMatches.push({index,title,offset:pos,excerpt:(begin?'…':'')+body.slice(begin,finish).replace(/\s+/g,' ')+(finish<body.length?'…':'') ,kind:'正文'});
+       }
+       pos+=term.length;count++;
+     }
+   }
+   if(found)matchedChapters++;
+ });
+ summary.textContent=`${matchedChapters} 個章節，共 ${total} 處符合`+(total>searchMatches.length?`｜顯示前 ${searchMatches.length} 筆（每章最多 12 筆）`:'');
+ results.innerHTML=searchMatches.map((x,i)=>`<button class="search-result" data-hit="${i}"><b>第 ${x.index+1} 章｜${esc(x.title)}</b><small>${esc(x.kind)}：${highlightSearchExcerpt(x.excerpt,raw)}</small></button>`).join('')||'<div class="empty">沒有符合的文字，可以試試較短的關鍵字。</div>';
+ results.querySelectorAll('[data-hit]').forEach(el=>el.onclick=()=>jumpSearchResult(searchMatches[Number(el.dataset.hit)],raw));
+}
+function jumpSearchResult(hit,term){
+ if(!hit||!book)return;
+ ci=hit.index;
+ $('#contentSearchModal').classList.remove('on');
+ showChapter(true);
+ if(hit.offset<0){toast('已跳至符合章名的章節');return}
+ // The reader renders each trimmed non-empty source line as a paragraph.
+ const raw=String(book.chapters[ci].content||'');
+ const lines=raw.match(/[^\n]+/g)||[];
+ let cursor=0,paragraph=-1,targetIndex=-1,targetPos=-1;
+ for(const line of lines){
+   const sourceAt=raw.indexOf(line,cursor);cursor=sourceAt+line.length;
+   if(!line.trim())continue;
+   paragraph++;
+   const leading=line.length-line.trimStart().length;
+   const trimmedStart=sourceAt+leading;
+   if(hit.offset>=trimmedStart && hit.offset<sourceAt+line.length){targetIndex=paragraph;targetPos=hit.offset-trimmedStart;break}
+ }
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   const p=document.querySelector(`#content p[data-p="${targetIndex}"]`);
+   if(!p)return;
+   const txt=p.textContent||'';
+   if(txt.slice(targetPos,targetPos+term.length).toLocaleLowerCase()===term.toLocaleLowerCase()){
+     const before=txt.slice(0,targetPos),match=txt.slice(targetPos,targetPos+term.length),after=txt.slice(targetPos+term.length);
+     p.innerHTML=esc(before)+'<mark class="novel-search-hit">'+esc(match)+'</mark>'+esc(after);
+   }
+   p.scrollIntoView({block:'center',behavior:'smooth'});
+ }));
+}
+$('#manageChaptersBtn').onclick=()=>{$('#drawer').classList.remove('on');selectedForDeletion.clear();$('#chapterFilter').value='';$('#chapterDeleteStatus').textContent='';$('#chapterManageModal').classList.add('on');renderChapterManager()};
+$('#chapterManageClose').onclick=()=>$('#chapterManageModal').classList.remove('on');
+$('#chapterFilter').addEventListener('input',renderChapterManager);
+function visibleChapterIndexes(){const q=$('#chapterFilter').value.trim().toLocaleLowerCase();return (book?.chapters||[]).map((c,i)=>({c,i})).filter(x=>!q||String(x.i+1).includes(q)||String(x.c.title||'').toLocaleLowerCase().includes(q)).map(x=>x.i)}
+function renderChapterManager(){
+ const visible=visibleChapterIndexes();
+ $('#chapterManageList').innerHTML=visible.map(i=>`<label class="manage-item"><input type="checkbox" data-chapter-index="${i}" ${selectedForDeletion.has(i)?'checked':''}><span>${i+1}. ${esc(book.chapters[i].title||'未命名章節')}</span></label>`).join('')||'<div class="empty">沒有符合章節</div>';
+ $('#chapterManageList').querySelectorAll('[data-chapter-index]').forEach(el=>el.onchange=()=>{const i=Number(el.dataset.chapterIndex);if(el.checked)selectedForDeletion.add(i);else selectedForDeletion.delete(i);updateChapterSelection()});
+ updateChapterSelection();
+}
+function updateChapterSelection(){$('#chapterDeleteStatus').textContent=`已選 ${selectedForDeletion.size} 章；刪除前會備份整本書。`}
+$('#selectVisibleChapters').onclick=()=>{visibleChapterIndexes().forEach(i=>selectedForDeletion.add(i));renderChapterManager()};
+$('#clearChapterSelection').onclick=()=>{selectedForDeletion.clear();renderChapterManager()};
+function validateChapterDelete(){const a=[...selectedForDeletion].sort((x,y)=>x-y);if(!a.length)throw new Error('請先選擇章節');if(a.length>=book.chapters.length)throw new Error('不能刪掉全部章節');return a}
+$('#previewChapterDelete').onclick=()=>{try{const a=validateChapterDelete();const names=a.slice(0,12).map(i=>`${i+1}. ${book.chapters[i].title}`).join('\n');alert(`將刪除 ${a.length} 章，剩下 ${book.chapters.length-a.length} 章：\n\n${names}${a.length>12?'\n…':''}\n\n尚未刪除任何資料。`)}catch(e){toast(e.message)}};
+$('#commitChapterDelete').onclick=async()=>{
+ if(editorBusy)return;
+ let indexes;try{indexes=validateChapterDelete()}catch(e){return toast(e.message)}
+ if(!confirm(`確定永久從書內移除 ${indexes.length} 章？\n系統會先建立 Google Drive 備份，並修正書籤與閱讀位置。`))return;
+ editorBusy=true;$('#commitChapterDelete').disabled=true;$('#chapterDeleteStatus').textContent='正在建立備份、修改並確認雲端結果…';
+ try{
+   await editAndVerify('deleteChapters',{id:book.id,chapterIndexes:indexes,expectedUpdatedAt:book.updatedAt});
+   await reloadCurrentBook();
+   selectedForDeletion.clear();$('#chapterManageModal').classList.remove('on');toast('章節刪除已確認，原檔已有備份');
+ }catch(e){alert('無法確認刪除結果：'+e.message+'\n請先重新開啟小說檢查，不要重複點擊。')}
+ finally{editorBusy=false;$('#commitChapterDelete').disabled=false}
+};
+
+$('#recoverShelfBtn').onclick=async()=>{
+ const btn=$('#recoverShelfBtn');btn.disabled=true;
+ try{
+   const audit=await apiGet('auditLibrary');
+   const missing=audit.unindexed||[];
+   const detail=`雲端書籍檔案：${audit.fileCount} 本\n索引列出的書籍：${audit.indexedCount} 本\n未列入書櫃的檔案：${missing.length} 本\n無法解析檔案：${(audit.invalid||[]).length} 本`;
+   if(audit.invalid?.length)return alert(detail+'\n\n部分檔案無法解析，已停止重建，請先備份並檢查。');
+   if(!missing.length)return alert(detail+'\n\n沒有發現遺漏的小說索引。');
+   if(!confirm(detail+'\n\n是否先備份 index.json，再把遺漏的小說加入書櫃？\n不會覆蓋小說正文。'))return;
+   await apiPost('recoverIndex',{payload:JSON.stringify({previewOnly:false})});
+   let found=false;
+   for(let n=0;n<10;n++){
+     await new Promise(r=>setTimeout(r,450+n*150));
+     const now=await apiGet('listBooks');
+     if(now.length>=audit.indexedCount+missing.length){found=true;break;}
+   }
+   if(!found)throw new Error('尚無法確認索引完成更新；請勿重複點擊，先檢查雲端資料。');
+   // Do not remove cached books when the server index is unexpectedly shorter.
+   await refresh();alert(`已確認加入 ${missing.length} 本缺漏的小說，請確認書櫃清單。`);
+ }catch(e){alert('檢查／復原暫停：'+e.message)}finally{btn.disabled=false}
+};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.5.5').catch(()=>{});
+const saved=localStorage.getItem('novelV656_PROD_Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
 </script>
 </body>
 </html>
