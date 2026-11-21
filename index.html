@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.5.7</title>
+<title>私藏書閣 V6.5.7.1</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -287,7 +287,7 @@ function apiGet(action,params={}){
    if(!base)return reject(new Error('尚未設定 GAS API 網址'));
    const cb='__novel_cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
    const script=document.createElement('script');
-   const timeoutMs=action==='auditLibrary'?60000:action==='listBooks'?30000:15000;
+   const timeoutMs=action==='auditLibrary'?60000:action==='loadBook'?90000:action==='listBooks'?30000:15000;
    const timer=setTimeout(()=>finish(new Error('GAS API 讀取逾時（'+Math.round(timeoutMs/1000)+' 秒）')),timeoutMs);
 
    function finish(err,data){
@@ -413,39 +413,63 @@ $('#lminus').onclick=()=>{cfg.lineHeight=Math.max(1.4,Math.round((cfg.lineHeight
 $('#mminus').onclick=()=>{cfg.sideMargin=Math.max(14,cfg.sideMargin-2);applyCfg()};$('#mplus').onclick=()=>{cfg.sideMargin=Math.min(60,cfg.sideMargin+2);applyCfg()};
 $('#aminus').onclick=()=>{cfg.letterSpacing=Math.max(0,Math.round((cfg.letterSpacing-.01)*100)/100);applyCfg()};$('#aplus').onclick=()=>{cfg.letterSpacing=Math.min(.12,Math.round((cfg.letterSpacing+.01)*100)/100);applyCfg()};
 $('#verticalMode').onclick=()=>{cfg.turnMode='vertical';applyCfg();toast('已切換：上下滑換章')};$('#horizontalMode').onclick=()=>{cfg.turnMode='horizontal';applyCfg();toast('已切換：左右滑換章')};
+let openingBookId=null;
 window.openBook=async id=>{
- $('#reader').classList.add('on');document.body.style.overflow='hidden';
+ openingBookId=id;
+ book=null;
+ $('#reader').classList.add('on');
+ document.body.style.overflow='hidden';
+ $('#readerLoading').innerHTML='<div><b>正在打開小說…</b><br><small>雲端內容載入中（首次開啟大型小說可能較久）</small></div>';
+ $('#readerLoading').classList.add('on');
  const meta=shelf.find(x=>x.id===id);
- $('#bookName').textContent=meta?.title||'載入中…';$('#prog').textContent='開啟中';
+ $('#bookName').textContent=meta?.title||'載入中…';
+ $('#prog').textContent='開啟中';
 
- const cached=await readBookLocal(id);
- if(cached){
-   book=cached;book.bookmarks=Array.isArray(book.bookmarks)?book.bookmarks:[];
-   ci=Math.min(book.progress?.chapter||0,book.chapters.length-1);
+ let cached=null;
+ try{cached=await readBookLocal(id)}catch(e){}
+ if(openingBookId!==id)return;
+ if(cached && Array.isArray(cached.chapters) && cached.chapters.length){
+   book=cached;
+   book.bookmarks=Array.isArray(book.bookmarks)?book.bookmarks:[];
+   ci=Math.max(0,Math.min(Number(book.progress?.chapter)||0,book.chapters.length-1));
    $('#readerLoading').classList.remove('on');
    showChapter(false);
- }else{
-   $('#readerLoading').classList.add('on');
  }
-
- // 雲端更新放背景；有快取時不阻塞畫面。
- apiGet('loadBook',{id:id}).then(latest=>{
-   if(!latest)return;
-   cacheBookLocal(latest);
-   if(!book || book.id!==id)return;
-   const shouldRefresh=!cached || Number(latest.updatedAt||0)>Number(cached.updatedAt||0);
+ // 首次載入必須將雲端書籍指定給 book，而非只存入本機快取。
+ apiGet('loadBook',{id}).then(async latest=>{
+   if(openingBookId!==id)return;
+   if(!latest || !Array.isArray(latest.chapters) || !latest.chapters.length)
+     throw new Error('雲端書籍沒有可閱讀的章節');
+   const shouldRefresh=!book || book.id!==id ||
+     Number(latest.updatedAt||0)>Number(book.updatedAt||0);
    if(shouldRefresh){
-     const oldCi=ci,oldScroll=$('#scroll').scrollTop;
-     book=latest;book.bookmarks=Array.isArray(book.bookmarks)?book.bookmarks:[];
-     ci=Math.min(oldCi,book.chapters.length-1);
+     const oldScroll=book?.id===id?$('#scroll').scrollTop:0;
+     const oldCi=book?.id===id?ci:Number(latest.progress?.chapter)||0;
+     book=latest;
+     book.bookmarks=Array.isArray(book.bookmarks)?book.bookmarks:[];
+     ci=Math.max(0,Math.min(oldCi,book.chapters.length-1));
      $('#readerLoading').classList.remove('on');
-     showChapter(true);
-     requestAnimationFrame(()=>$('#scroll').scrollTop=oldScroll);
+     showChapter(!cached);
+     if(cached)requestAnimationFrame(()=>$('#scroll').scrollTop=oldScroll);
+   }else{
+     $('#readerLoading').classList.remove('on');
    }
+   await cacheBookLocal(latest);
  }).catch(e=>{
-   if(!cached){$('#readerLoading').innerHTML='<div><b>載入失敗</b><br><small>'+esc(e.message)+'</small></div>'}
+   if(openingBookId!==id)return;
+   if(!book || book.id!==id){
+     $('#readerLoading').innerHTML='<div style="padding:20px"><b>小說載入失敗</b><p style="font-size:13px;line-height:1.7">'+esc(e.message)+'</p><button class="btn dark" onclick="openBook('+JSON.stringify(id)+')">重新載入</button><button class="btn" onclick="leaveFailedBook()">返回書櫃</button></div>';
+     $('#readerLoading').classList.add('on');
+   }else toast('雲端更新失敗，暫時顯示本機快取');
  });
-}
+};
+window.leaveFailedBook=()=>{
+ openingBookId=null;
+ $('#reader').classList.remove('on','clean');
+ $('#readerLoading').classList.remove('on');
+ document.body.style.overflow='';
+};
+
 function showChapter(reset=true){speechSynthesis.cancel();speaking=false;const c=book.chapters[ci];$('#bookName').textContent=book.title;$('#prog').textContent=`第 ${ci+1} / ${book.chapters.length} 章`;$('#kicker').textContent=`第 ${ci+1} 章`;$('#ctitle').textContent=c.title;const ps=(c.content||'').split(/\n{2,}|\n/).map(x=>x.trim()).filter(Boolean);$('#content').innerHTML=ps.map((p,i)=>`<p data-p="${i}" onclick="selectSpeechParagraph(${i})">${esc(p)}</p>`).join('');$('#prev').disabled=ci===0;$('#next').disabled=ci===book.chapters.length-1;$('#tocList').innerHTML=book.chapters.map((x,i)=>`<button class="tocitem ${i===ci?'now':''}" onclick="go(${i})">${i+1}. ${esc(x.title)}</button>`).join('');renderBms();requestAnimationFrame(()=>$('#scroll').scrollTop=reset?0:(book.progress?.scrollPx||0));updateBm()}
 window.go=i=>{ci=i;$('#toc').classList.remove('on');showChapter(true)}
 function saveProgress(){
@@ -1059,7 +1083,7 @@ $('#recoverShelfBtn').onclick=async()=>{
    await refresh();alert(`已確認加入 ${missing.length} 本缺漏的小說，請確認書櫃清單。`);
  }catch(e){alert('檢查／復原暫停：'+e.message)}finally{btn.disabled=false}
 };
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.5.7').catch(()=>{});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=6.5.7.1').catch(()=>{});
 const saved=localStorage.getItem('novelV657_PROD_Gas');if(saved){$('#gasUrl').value=saved;connect(saved)}
 </script>
 </body>
