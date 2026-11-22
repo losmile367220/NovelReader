@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.5.11</title>
+<title>私藏書閣 V6.5.12</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -552,35 +552,67 @@ function bmKey(){return ci+':'+Math.round($('#scroll').scrollTop/120)}
 function curBm(){if(!book)return null;const k=bmKey();return (book.bookmarks||[]).find(x=>x.key===k)}
 function updateBm(){if(!book)return;$('#bookmark').innerHTML=(curBm()?'★':'☆')+'<br><small>書籤</small>'}
 let bookmarkSaving=false;
+let pendingBookmarkOperation=null;
 async function fetchBookmarkState(id){
   const result=await apiGet('bookmarkState',{id});
   if(!result||!Array.isArray(result.bookmarks))throw new Error('雲端書籤資料無效');
   return result;
 }
-function showBookmarkSync(text){
+function showBookmarkSync(message){
   let e=document.getElementById('bookmarkSyncStatus');
-  if(!e){e=document.createElement('span');e.id='bookmarkSyncStatus';
-    e.style.cssText='display:block;font-size:12px;color:var(--muted);margin:6px 0';
+  if(!e){
+    e=document.createElement('button');e.id='bookmarkSyncStatus';e.type='button';
+    e.style.cssText='display:block;width:100%;text-align:left;font-size:12px;color:var(--muted);margin:6px 0;padding:7px;border:1px solid var(--line);background:transparent;border-radius:9px';
+    e.title='若狀態待確認，可點此重新查詢雲端';
+    e.onclick=()=>{if(pendingBookmarkOperation)recheckPendingBookmark();};
     $('#bmList').parentElement.insertBefore(e,$('#bmList'));
   }
-  e.textContent=text;
-  $('#syncDot').textContent=text;
+  e.textContent=message;
+  $('#syncDot').textContent=message;
   $('#syncDot').classList.add('on');
 }
-function endBookmarkSync(){setTimeout(()=>{$('#syncDot').classList.remove('on');$('#syncDot').textContent='雲端同步中'},1500)}
+function endBookmarkSync(){
+  setTimeout(()=>{
+    if(pendingBookmarkOperation)return;
+    $('#syncDot').classList.remove('on');$('#syncDot').textContent='雲端同步中';
+  },1800);
+}
 async function syncBookmarksForBook(id){
-  if(bookmarkSaving)return;
+  if(bookmarkSaving || (pendingBookmarkOperation&&pendingBookmarkOperation.id===id))return;
   try{
     const state=await fetchBookmarkState(id);
     if(book&&book.id===id && !bookmarkSaving){
       book.bookmarks=state.bookmarks;
-      await cacheBookLocal(book);
-      updateBm();renderBms();
+      await cacheBookLocal(book);updateBm();renderBms();
     }
-  }catch(e){ /* Offline: keep local view, do not claim cloud sync. */ }
+  }catch(e){ /* Keep local book; do not claim cloud success. */ }
+}
+function bookmarkTimingText(stats){
+  return `送出 ${((stats.post||0)/1000).toFixed(1)} 秒｜確認 ${((stats.verify||0)/1000).toFixed(1)} 秒｜查詢 ${stats.attempts||0} 次`;
+}
+async function recheckPendingBookmark(){
+  if(bookmarkSaving||!pendingBookmarkOperation)return;
+  bookmarkSaving=true;
+  const p=pendingBookmarkOperation;
+  showBookmarkSync('正在重新核對雲端書籤…');
+  try{
+    const state=await fetchBookmarkState(p.id);
+    if(state.lastBookmarkOperation?.token===p.token){
+      pendingBookmarkOperation=null;
+      if(book?.id===p.id){book.bookmarks=state.bookmarks;await cacheBookLocal(book);updateBm();renderBms();}
+      showBookmarkSync('已確認雲端儲存成功（重新核對）');
+    }else{
+      showBookmarkSync('仍待確認；請勿重複提交，可點此再查詢');
+    }
+  }catch(e){showBookmarkSync('核對失敗：'+e.message+'；點此重試');}
+  finally{bookmarkSaving=false;endBookmarkSync();}
 }
 $('#bookmark').onclick=async()=>{
   if(!book||bookmarkSaving)return;
+  if(pendingBookmarkOperation){
+    showBookmarkSync('前次書籤尚待確認；請點狀態文字重新核對');
+    return;
+  }
   bookmarkSaving=true;
   $('#bookmark').disabled=true;
   const id=book.id,chapter=ci,px=$('#scroll').scrollTop;
@@ -593,37 +625,43 @@ $('#bookmark').onclick=async()=>{
   const entry={id:uid(),chapter,scrollPx:px,title:String(c.title||''),excerpt:raw.slice(pos,pos+55),key:k,createdAt:Date.now()};
   const payload=existing?{id,mode:'remove',bookmarkId:existing.id,token}:
     {id,mode:'add',bookmark:entry,token};
-  // Optimistic UI is explicitly pending, never labeled cloud-saved yet.
   book.bookmarks=existing?original.filter(b=>b.id!==existing.id):[...original,entry];
   updateBm();renderBms();
   showBookmarkSync('書籤已暫存，雲端同步中…');
   await cacheBookLocal(book);
+  const stats={post:0,verify:0,attempts:0};
   try{
+    const postStart=performance.now();
     await apiPost('mutateBookmark',{payload:JSON.stringify(payload)});
+    stats.post=performance.now()-postStart;
     let confirmed=null;
-    for(let i=0;i<9;i++){
-      if(i)await new Promise(r=>setTimeout(r,Math.min(300+i*240,1200)));
+    const verifyStart=performance.now();
+    // Most successful writes should be visible immediately after POST resolves.
+    // Limit repeated expensive GAS calls; retain pending state rather than claiming failure.
+    for(let i=0;i<3;i++){
+      if(i)await new Promise(r=>setTimeout(r,i===1?600:1400));
+      stats.attempts++;
       try{
         const state=await fetchBookmarkState(id);
         if(state.lastBookmarkOperation?.token===token){confirmed=state;break;}
-      }catch(e){}
+      }catch(e){ /* Transient fetch failures are covered by the next check. */ }
     }
-    if(!confirmed)throw new Error('未取得此次操作的雲端確認');
+    stats.verify=performance.now()-verifyStart;
+    console.info('[PrivateNovelReader] bookmark sync timing',stats);
+    if(!confirmed){
+      pendingBookmarkOperation={id,token};
+      showBookmarkSync('雲端仍待確認｜'+bookmarkTimingText(stats)+'；點此重新核對');
+      return;
+    }
     if(book?.id===id){
       book.bookmarks=confirmed.bookmarks;
       await cacheBookLocal(book);updateBm();renderBms();
     }
-    showBookmarkSync(existing?'已確認雲端移除書籤':'已確認雲端儲存書籤');
+    showBookmarkSync((existing?'已確認移除':'已確認儲存')+'｜'+bookmarkTimingText(stats));
   }catch(e){
-    // A failed confirmation is not proof of failure: re-read actual cloud state.
-    let latest=null;
-    try{latest=await fetchBookmarkState(id)}catch{}
-    if(book?.id===id){
-      book.bookmarks=latest?latest.bookmarks:original;
-      await cacheBookLocal(book);updateBm();renderBms();
-    }
-    showBookmarkSync('雲端未確認，請檢查後再操作');
-    alert('書籤寫入尚未確認：'+e.message+'。請勿立刻重複點擊；重新進入書籤列表核對。');
+    // A failed or unreadable POST response does not prove the operation failed.
+    pendingBookmarkOperation={id,token};
+    showBookmarkSync('寫入結果待確認：'+e.message+'；點此重新核對');
   }finally{bookmarkSaving=false;$('#bookmark').disabled=false;endBookmarkSync();}
 };
 function renderBms(){$('#bmList').innerHTML=book?.bookmarks?.length?[...book.bookmarks].sort((a,b)=>a.chapter-b.chapter||a.scrollPx-b.scrollPx).map(b=>`<button class="bmitem" onclick="jumpBm('${b.id}')"><b>${b.chapter+1}. ${esc(b.title)}</b><small>${esc(b.excerpt||'')}</small></button>`).join(''):'<div class="empty">還沒有書籤。</div>'}
