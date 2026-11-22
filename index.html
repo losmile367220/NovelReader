@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.5.12</title>
+<title>私藏書閣 V6.5.13｜頂部搜尋快捷鍵</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -31,8 +31,8 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 
 /* full-screen app reader */
 .reader{position:fixed;inset:0;z-index:100;background:var(--rbg);color:var(--rt);display:none;overflow:hidden}.reader.on{display:block}
-.reader-head{position:absolute;z-index:5;top:0;left:0;right:0;padding:calc(9px + var(--safe-t)) 16px 9px;height:calc(62px + var(--safe-t));display:grid;grid-template-columns:90px 1fr 90px;align-items:end;background:color-mix(in srgb,var(--rbg) 94%,transparent);backdrop-filter:blur(18px);border-bottom:1px solid color-mix(in srgb,var(--rt) 10%,transparent);transition:.22s}.reader.clean .reader-head{transform:translateY(-110%)}
-.iconbtn{border:0;background:transparent;color:inherit;height:40px;border-radius:13px;font-weight:650}.iconbtn:active{background:color-mix(in srgb,var(--rt) 8%,transparent)}
+.reader-head{position:absolute;z-index:5;top:0;left:0;right:0;padding:calc(9px + var(--safe-t)) 16px 9px;height:calc(62px + var(--safe-t));display:grid;grid-template-columns:90px minmax(0,1fr) 124px;align-items:end;background:color-mix(in srgb,var(--rbg) 94%,transparent);backdrop-filter:blur(18px);border-bottom:1px solid color-mix(in srgb,var(--rt) 10%,transparent);transition:.22s}.reader.clean .reader-head{transform:translateY(-110%)}
+.reader-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:3px;min-width:0}.reader-head-actions .iconbtn{padding:0 7px;white-space:nowrap}.reader-head-actions .search-top-btn{width:42px;min-width:42px;font-size:20px;display:grid;place-items:center}.iconbtn{border:0;background:transparent;color:inherit;height:40px;border-radius:13px;font-weight:650}.iconbtn:active{background:color-mix(in srgb,var(--rt) 8%,transparent)}
 .center{text-align:center;min-width:0}.center b,.center small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.center b{font-size:13px}.center small{font-size:11px;opacity:.45;margin-top:2px}
 .scroller{height:100%;overflow:auto;-webkit-overflow-scrolling:touch;padding:calc(92px + var(--safe-t)) var(--side) calc(135px + var(--safe-b))}
 .article{max-width:760px;margin:auto}.chapter-kicker{font-size:13px;opacity:.45;margin-bottom:28px}.chapter-title{font-size:1.18em;margin:0 0 36px;font-weight:750}
@@ -49,7 +49,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 
 @media(max-width:680px){
  .app{padding:12px}.brand small{display:none}.hero{display:none}.header{padding-top:calc(5px + var(--safe-t))}.grid{grid-template-columns:1fr 1fr;gap:9px}.book{padding:10px}.cover{height:92px}.book .row{grid-template-columns:1fr}
- .reader-head{grid-template-columns:72px 1fr 72px}.scroller{padding-left:var(--side);padding-right:var(--side)}.bottom{bottom:calc(8px + var(--safe-b));border-radius:20px}.tool{height:46px;padding:0 4px;font-size:13px}.palette{grid-template-columns:repeat(6,1fr)}
+ .reader-head{grid-template-columns:72px minmax(0,1fr) 106px}.reader-head-actions .iconbtn{padding:0 4px}.reader-head-actions .search-top-btn{width:38px;min-width:38px}.scroller{padding-left:var(--side);padding-right:var(--side)}.bottom{bottom:calc(8px + var(--safe-b));border-radius:20px}.tool{height:46px;padding:0 4px;font-size:13px}.palette{grid-template-columns:repeat(6,1fr)}
 }
 @media(max-width:430px){.grid{grid-template-columns:1fr}.book .row{grid-template-columns:1fr 1fr}}
 @media(min-width:900px){.drawer{left:50%;right:auto;width:640px;bottom:22px;border-radius:28px;transform:translate(-50%,120%)}.drawer.on{transform:translate(-50%,0)}}
@@ -123,7 +123,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 
 <section id="reader" class="reader">
  <div id="readerLoading" class="loading-reader"><div><b>正在打開小說…</b><br><small>雲端內容載入中</small></div></div>
- <header class="reader-head"><button class="iconbtn" id="leave">‹ 書櫃</button><div class="center"><b id="bookName"></b><small id="prog"></small></div><button class="iconbtn" id="tocOpen">目錄</button></header>
+ <header class="reader-head"><button class="iconbtn" id="leave">‹ 書櫃</button><div class="center"><b id="bookName"></b><small id="prog"></small></div><div class="reader-head-actions"><button class="iconbtn search-top-btn" id="searchTopBtn" type="button" aria-label="搜尋小說內容" title="搜尋小說內容">🔍</button><button class="iconbtn" id="tocOpen" type="button">目錄</button></div></header>
  <div id="scroll" class="scroller"><article class="article"><div id="kicker" class="chapter-kicker"></div><h2 id="ctitle" class="chapter-title"></h2><div id="content" class="content"></div></article></div>
  <nav class="bottom">
   <button class="tool" id="smaller">A−</button>
@@ -1127,6 +1127,7 @@ $('#urlImportGo').onclick=async()=>{
 let selectedForDeletion=new Set();
 let searchTimer, activeSearchTerm='', searchMatches=[];
 $('#searchContentBtn').onclick=()=>{ $('#drawer').classList.remove('on');$('#contentSearchModal').classList.add('on');$('#contentSearchInput').focus();renderContentSearch(); };
+$('#searchTopBtn').onclick=()=>$('#searchContentBtn').click();
 $('#searchContentClose').onclick=()=>$('#contentSearchModal').classList.remove('on');
 $('#searchClear').onclick=()=>{$('#contentSearchInput').value='';renderContentSearch();$('#contentSearchInput').focus()};
 $('#contentSearchInput').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(renderContentSearch,240)});
