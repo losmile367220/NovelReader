@@ -342,19 +342,29 @@ async function apiPost(action,params={}){
 
 function editToken(){return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,12)}
 async function editAndVerify(action,payload){
- // POST is opaque on GitHub Pages: only a matching server-side receipt is proof of success.
- const token=editToken(); payload={...payload,token,previewOnly:false};
+ // Check the durable cloud version before an opaque POST. Never overwrite newer data.
+ const token=editToken();
  const started=performance.now();
+ const preflight=await apiGet('editPreflight',{id:payload.id});
+ if(Number(preflight.updatedAt)!==Number(payload.expectedUpdatedAt)){
+   throw new Error('小說雲端版本已更新（本機 '+payload.expectedUpdatedAt+'／雲端 '+preflight.updatedAt+'）。本次未送出修改。請關閉小說並重新開啟，確認內容後再選字替換。');
+ }
+ payload={...payload,token,previewOnly:false};
  await apiPost(action,{payload:JSON.stringify(payload)});
  let lastError='';
- for(let i=0;i<9;i++){
-   if(i)await new Promise(r=>setTimeout(r,Math.min(280+i*260,1500)));
+ // Do not confuse an opaque POST transport acknowledgement with durable success.
+ for(let i=0;i<8;i++){
+   if(i)await new Promise(r=>setTimeout(r,Math.min(600+i*450,2100)));
    try{
      const r=await apiGet('editStatus',{id:payload.id,token});
+     if(r?.rejected)throw new Error('GAS 拒絕修改：'+(r.error||'未提供原因'));
      if(r?.confirmed)return {...r,elapsedMs:Math.round(performance.now()-started)};
-   }catch(e){lastError=e.message}
+   }catch(e){
+     if(String(e.message||'').startsWith('GAS 拒絕修改：'))throw e;
+     lastError=e.message;
+   }
  }
- throw new Error('無法確認雲端修改是否成功；請重新開啟小說檢查後再操作。'+(lastError?' '+lastError:''));
+ throw new Error('修改結果未確認。請先重新開書核對文字，不要重複送出。'+(lastError?' 查詢訊息：'+lastError:''));
 }
 async function reloadCurrentBook(){
  const b=await apiGet('loadBook',{id:book.id});
