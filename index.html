@@ -741,6 +741,12 @@ $('#scroll').addEventListener('touchend',e=>{
 function openTocAtCurrentChapter(){
   const panel=$('#toc');
   if(!panel || !book)return;
+  // The same TOC button toggles the side panel open and closed.
+  // Do not change the novel scroll position when closing.
+  if(panel.classList.contains('on')){
+    panel.classList.remove('on');
+    return;
+  }
   $('#reader').classList.remove('clean');
   $('#drawer').classList.remove('on');
   panel.classList.add('on');
