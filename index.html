@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.5.13｜頂部搜尋快捷鍵</title>
+<title>私藏書閣 V6.5.15｜自動同步與文字替換修復</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -94,6 +94,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 .selection-action.on{display:block}
 .replace-count{display:block;font-size:12px;color:#8d8279;margin-top:3px}
 
+.sync-status{position:fixed;left:50%;top:calc(14px + var(--safe-t));transform:translateX(-50%);z-index:410;padding:8px 12px;border-radius:12px;background:#292d2b;color:#fff;font-size:12px;box-shadow:0 8px 25px #0003;display:none;max-width:92vw;text-align:center}.sync-status.on{display:block}
 .sync-dot{position:fixed;right:12px;bottom:calc(12px + var(--safe-b));z-index:390;background:#26231f;color:#fff;border-radius:99px;padding:7px 10px;font-size:11px;opacity:0;transform:translateY(8px);transition:.18s;pointer-events:none}.sync-dot.on{opacity:.82;transform:none}
  .manage-list{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:8px}
  .manage-item{padding:10px 6px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:9px}
@@ -115,7 +116,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 </section>
 
 <main class="app">
- <header class="header"><div class="brand"><div class="mark">書</div><div><h1>私藏書閣</h1><small>V6.2 · 私人雲端閱讀器</small></div></div><div class="actions"><button class="btn" id="sync">↻</button><button class="btn dark" id="importBtn">＋ 匯入</button></div></header>
+ <header class="header"><div class="brand"><div class="mark">書</div><div><h1>私藏書閣</h1><small>V6.2 · 私人雲端閱讀器</small></div></div><div class="actions"><button class="btn" id="sync" title="檢查雲端同步狀態">☁ 同步</button><button class="btn dark" id="importBtn">＋ 匯入</button></div></header>
  <section class="hero"><h2>你的小說，換個裝置也能接著看。</h2><p>Google Drive 雲端書櫃、閱讀進度、書籤與閱讀設定同步。手機加入主畫面後會以獨立 App 模式開啟。</p></section>
  <div class="section-title"><div><h3>我的書櫃</h3><small id="count">等待連線</small></div><div class="actions"><button class="btn" id="recoverShelfBtn">檢查／找回書籍</button><button class="btn" id="changeBackend">後端設定</button></div></div>
  <section id="books" class="grid"><div class="empty">正在準備書櫃…</div></section>
@@ -145,7 +146,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
    <div class="srow"><span>翻章方式</span><div class="step"><button id="verticalMode" style="width:auto;padding:0 12px">上下滑</button><button id="horizontalMode" style="width:auto;padding:0 12px">左右滑</button></div></div>
   </div>
   <div class="setting"><b>背景顏色</b><div id="palette" class="palette"></div><small id="themeName" style="color:#8f857b"></small></div>
-  <div class="setting"><div class="sheet-actions"><button class="btn" id="bmOpen">🔖 書籤列表</button><button class="btn" id="edit">✎ 編輯本章</button><button class="btn" id="replaceSelectedBtn">替換選取文字</button><button class="btn" id="closeBook">回到書櫃</button><button class="btn" id="tocFromSettings">章節目錄</button><button class="btn" id="searchContentBtn">🔎 搜尋內容</button><button class="btn" id="manageChaptersBtn">管理／刪除章節</button><button class="btn" id="addChapterBtn">＋ 新增章節</button></div></div>
+  <div class="setting"><div class="sheet-actions"><button class="btn" id="bmOpen">🔖 書籤列表</button><button class="btn" id="edit">✎ 編輯本章</button><button class="btn" id="replaceSelectedBtn">替換選取文字</button><button class="btn" id="closeBook">回到書櫃</button><button class="btn" id="tocFromSettings">章節目錄</button><button class="btn" id="searchContentBtn">🔎 搜尋內容</button><button class="btn" id="readerSyncBtn">☁ 檢查同步</button><button class="btn" id="manageChaptersBtn">管理／刪除章節</button><button class="btn" id="addChapterBtn">＋ 新增章節</button></div></div>
  </section>
  <section id="speechSheet" class="speech-sheet">
   <div class="handle"></div>
@@ -248,7 +249,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
  <div class="utility-row"><button class="btn dark" id="addChapterSave">備份並新增章節</button></div>
  <div id="addChapterStatus" class="meta" style="margin-top:10px" role="status"></div>
  </div></div>
-<div id="syncDot" class="sync-dot">雲端同步中</div><div id="toast" class="toast"></div>
+<div id="syncDot" class="sync-dot">雲端同步中</div><div id="syncStatus" class="sync-status" role="status" aria-live="polite">同步狀態確認中</div><div id="toast" class="toast"></div>
 
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -267,16 +268,22 @@ let idbPromise=null;
 function openNovelDB(){
  if(idbPromise)return idbPromise;
  idbPromise=new Promise((resolve,reject)=>{
-  const req=indexedDB.open('PrivateNovelReaderV6511_PROD',1);
-  req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('books'))db.createObjectStore('books',{keyPath:'id'})};
+  const req=indexedDB.open('PrivateNovelReaderV6511_PROD',2);
+  req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('books'))db.createObjectStore('books',{keyPath:'id'});if(!db.objectStoreNames.contains('pendingEdits'))db.createObjectStore('pendingEdits',{keyPath:'id'})};
   req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
  });
  return idbPromise;
 }
 async function cacheBookLocal(b){
  if(!b?.id)return;
- memoryBooks.set(b.id,b);
- try{const db=await openNovelDB();const tx=db.transaction('books','readwrite');tx.objectStore('books').put(structuredClone(b))}catch{}
+ const snapshot=structuredClone(b);
+ const db=await openNovelDB();
+ await new Promise((resolve,reject)=>{
+   const tx=db.transaction('books','readwrite');
+   tx.objectStore('books').put(snapshot);
+   tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+ });
+ memoryBooks.set(b.id,snapshot);
 }
 async function readBookLocal(id){
  if(memoryBooks.has(id))return memoryBooks.get(id);
@@ -287,6 +294,115 @@ async function readBookLocal(id){
   return b;
  }catch{return null}
 }
+// At most one pending text edit per book. Retain the exact token until confirmed.
+let syncingText=false, syncIssue='', syncNoticeTimer=null;
+async function pendingGet(id){
+ const db=await openNovelDB();
+ return new Promise((resolve,reject)=>{const q=db.transaction('pendingEdits','readonly').objectStore('pendingEdits').get(id);q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error)});
+}
+async function pendingAll(){
+ const db=await openNovelDB();
+ return new Promise((resolve,reject)=>{const q=db.transaction('pendingEdits','readonly').objectStore('pendingEdits').getAll();q.onsuccess=()=>resolve(q.result||[]);q.onerror=()=>reject(q.error)});
+}
+async function pendingPut(item){
+ const db=await openNovelDB();
+ await new Promise((resolve,reject)=>{const tx=db.transaction('pendingEdits','readwrite');tx.objectStore('pendingEdits').put(item);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});
+ updateSyncIndicator();
+}
+async function pendingDelete(id){
+ const db=await openNovelDB();
+ await new Promise((resolve,reject)=>{const tx=db.transaction('pendingEdits','readwrite');tx.objectStore('pendingEdits').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});
+ updateSyncIndicator();
+}
+function showSyncStatus(message,showMs=4200){
+ const el=$('#syncStatus');el.textContent=message;el.classList.add('on');
+ clearTimeout(syncNoticeTimer);if(showMs)syncNoticeTimer=setTimeout(()=>el.classList.remove('on'),showMs);
+}
+async function updateSyncIndicator(){
+ try{
+  const n=(await pendingAll()).length;
+  $('#sync').textContent=n?'☁ 同步 '+n:'☁ 同步';
+  $('#sync').title=n?`${n} 本小說有尚未確認的替換修改`:'檢查雲端同步狀態';
+ }catch(e){$('#sync').textContent='☁ 同步 ?';}
+}
+function contentSnapshot(b){return {id:b.id,title:b.title,chapters:structuredClone(b.chapters)};}
+function sameSnapshot(snapshot,b){return !!(snapshot&&b&&snapshot.id===b.id&&snapshot.title===b.title&&JSON.stringify(snapshot.chapters)===JSON.stringify(b.chapters));}
+function applyLocalReplacement(chapters,payload){
+ const n=payload.chapterIndex==='all'?chapters.map((_,i)=>i):[Number(payload.chapterIndex)];
+ if(payload.mode==='here'){
+   const i=n[0],c=chapters[i],old=String(c.content||''),k=Number(payload.offset);
+   if(!Number.isInteger(k)||old.slice(k,k+payload.find.length)!==payload.find)throw new Error('選取文字已改變');
+   c.content=old.slice(0,k)+payload.replacement+old.slice(k+payload.find.length);
+ }else for(const i of n){const c=chapters[i];c.content=String(c.content||'').split(payload.find).join(payload.replacement)}
+}
+async function syncOnePending(item){
+ let live=await pendingGet(item.id);if(!live)return;
+ // If POST may already have been accepted, verify first and never blindly resend.
+ if(live.phase==='sent'||live.phase==='uncertain'){
+   const status=await apiGet('editStatus',{id:live.id,token:live.token});
+   if(status?.confirmed){await finishPending(live,status);return;}
+   if(status?.rejected){live.phase='conflict';live.error=status.error||'後端拒絕修改';await pendingPut(live);throw new Error(live.error)}
+   // A no-cors POST can be executing even after the browser has lost contact.
+   // Only a confirmed result is sufficient to clear the local queued edit.
+   live.phase='uncertain';live.error='雲端仍未回覆這筆修改；保留本機版本，避免重複傳送';await pendingPut(live);
+   throw new Error(live.error);
+ }
+ if(live.phase==='conflict')throw new Error(live.error||'已有衝突，需要人工核對');
+ const preflight=await apiGet('editPreflight',{id:live.id});
+ let expected=Number(live.payload.expectedUpdatedAt);
+ if(Number(preflight.updatedAt)!==expected){
+   const cloud=await loadBookFast(live.id);
+   if(!sameSnapshot(live.base,cloud)){
+     live.phase='conflict';live.error='雲端與編輯前的小說正文不同，已暫停上傳以保護兩份內容';
+     await pendingPut(live);throw new Error(live.error);
+   }
+   expected=Number(cloud.updatedAt);
+ }
+ live.payload.expectedUpdatedAt=expected;
+ // Commit sent state before sending, preserving token for idempotent confirmation.
+ live.phase='sent';live.error='';await pendingPut(live);
+ await apiPost('replaceText',{payload:JSON.stringify({...live.payload,token:live.token,previewOnly:false})});
+ for(let i=0;i<8;i++){
+   if(i)await new Promise(r=>setTimeout(r,Math.min(650+i*450,2100)));
+   try{
+     const status=await apiGet('editStatus',{id:live.id,token:live.token});
+     if(status?.rejected){live.phase='conflict';live.error=status.error||'後端拒絕替換';await pendingPut(live);throw new Error(live.error)}
+     if(status?.confirmed){await finishPending(live,status);return;}
+   }catch(e){if(live.phase==='conflict')throw e;}
+ }
+ live.phase='uncertain';live.error='雲端結果尚未確認，已保留本機修改與操作識別碼';
+ await pendingPut(live);throw new Error(live.error);
+}
+async function finishPending(item,status){
+ // Refresh cloud only after confirmation. No pending replacement should be discarded.
+ const fresh=await loadBookFast(item.id);
+ if(!sameSnapshot(item.result,fresh)){
+   const keep=await pendingGet(item.id);
+   if(keep){keep.phase='conflict';keep.error='後端已確認，但雲端內容與預期不同，請檢查後再同步';await pendingPut(keep)}
+   throw new Error('雲端內容與本機預期不同，已保留本機修改');
+ }
+ await cacheBookLocal(fresh);
+ await pendingDelete(item.id);
+ if(book?.id===item.id){
+   const scroll=$('#scroll').scrollTop,chapter=ci;
+   book=fresh;ci=Math.min(chapter,book.chapters.length-1);
+   showChapter(false);requestAnimationFrame(()=>$('#scroll').scrollTop=scroll);
+ }
+ showSyncStatus('✓ 文字替換已確認同步至 Google Drive',4300);
+}
+async function flushPending(){
+ if(syncingText||!apiBase())return;
+ syncingText=true;
+ try{
+   const items=await pendingAll();
+   for(const item of items){
+     try{await syncOnePending(item)}
+     catch(e){syncIssue=e.message;showSyncStatus('⚠ '+e.message,7500)}
+   }
+ }finally{syncingText=false;updateSyncIndicator()}
+}
+window.addEventListener('online',()=>flushPending().catch(()=>{}));
+
 function backgroundSync(promise){
  $('#syncDot').classList.add('on');
  Promise.resolve(promise).catch(()=>{}).finally(()=>setTimeout(()=>$('#syncDot').classList.remove('on'),250));
@@ -341,13 +457,30 @@ async function apiPost(action,params={}){
 }
 
 function editToken(){return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,12)}
+function sameEditableNovel_(a,b){
+ // Compare actual editable material, not the timestamp or listening/reading progress.
+ return !!(a&&b&&a.id===b.id&&a.title===b.title&&
+   JSON.stringify(a.chapters)===JSON.stringify(b.chapters));
+}
 async function editAndVerify(action,payload){
+ if(await pendingGet(payload.id))throw new Error('此書仍有尚未確認的文字替換，為避免覆寫請先點「同步」確認');
  // Check the durable cloud version before an opaque POST. Never overwrite newer data.
  const token=editToken();
  const started=performance.now();
  const preflight=await apiGet('editPreflight',{id:payload.id});
  if(Number(preflight.updatedAt)!==Number(payload.expectedUpdatedAt)){
-   throw new Error('小說雲端版本已更新（本機 '+payload.expectedUpdatedAt+'／雲端 '+preflight.updatedAt+'）。本次未送出修改。請關閉小說並重新開啟，確認內容後再選字替換。');
+   // Different timestamps do not necessarily mean different chapter text.
+   // Verify before retrying; never silently discard unsynced local chapters.
+   const latest=await loadBookFast(payload.id);
+   if(!sameEditableNovel_(book,latest)){
+     throw new Error('本機與雲端小說正文不同，已停止本次修改以保護資料。請先備份本機小說，再比對雲端版本；不要清除網站資料。');
+   }
+   const priorProgress=book.progress;
+   book=latest;
+   book.progress=priorProgress||latest.progress;
+   await cacheBookLocal(book);
+   payload.expectedUpdatedAt=latest.updatedAt;
+   // The selected text and absolute offset remain valid because chapters are identical.
  }
  payload={...payload,token,previewOnly:false};
  await apiPost(action,{payload:JSON.stringify(payload)});
@@ -391,6 +524,7 @@ async function connect(url){
    applyCfg(false);
    $('#setup').classList.add('hidden');
    await refresh();
+   updateSyncIndicator();flushPending().catch(()=>{});
  }catch(e){
    $('#setupMsg').textContent='✕ '+e.message;
  }
@@ -420,7 +554,8 @@ function renderBooks(){$('#count').textContent=shelf.length+' 本小說';$('#boo
 <div class="bar"><i style="width:${p}%"></i></div>
 <div class="row"><button class="btn dark" onclick="openBook('${b.id}')">閱讀</button><button class="btn" onclick="exportTxt('${b.id}')">TXT</button></div>
 </article>`}).join(''):'<div class="empty">書櫃目前是空的。</div>'}
-$('#sync').onclick=refresh;
+async function manualSyncCheck(){showSyncStatus('正在檢查同步狀態…',0);await flushPending();await refresh();const n=(await pendingAll()).length;showSyncStatus(n?`仍有 ${n} 筆替換未確認，已保留在本機；請查看提示`:'✓ 書櫃已重新讀取雲端；待確認替換 0 筆',5000)}
+$('#sync').onclick=manualSyncCheck;$('#readerSyncBtn').onclick=manualSyncCheck;
 function applyCfg(save=true){document.documentElement.style.setProperty('--fs',cfg.fontSize+'px');document.documentElement.style.setProperty('--lh',cfg.lineHeight);document.documentElement.style.setProperty('--ls',cfg.letterSpacing+'em');document.documentElement.style.setProperty('--side',cfg.sideMargin+'px');document.documentElement.style.setProperty('--rbg',cfg.readerBg);document.documentElement.style.setProperty('--rt',cfg.readerText);$('#fval').textContent=cfg.fontSize;$('#lval').textContent=Number(cfg.lineHeight).toFixed(2);$('#mval').textContent=cfg.sideMargin;$('#aval').textContent=Number(cfg.letterSpacing).toFixed(2);$('#themeName').textContent=cfg.themeName||'自訂';
 if($('#verticalMode')&&$('#horizontalMode')){
   $('#verticalMode').style.background=cfg.turnMode==='vertical'?'#26231f':'#fff';
@@ -477,6 +612,9 @@ window.openBook=async id=>{
  if(openingBookId!==id)return;
  if(cached && Array.isArray(cached.chapters) && cached.chapters.length){
    book=cached;
+   // Restore an optimistic replacement even if the browser closed between queue and book-cache writes.
+   const pendingLocal=await pendingGet(id);
+   if(pendingLocal?.result?.chapters){book={...book,chapters:structuredClone(pendingLocal.result.chapters)};}
    book.bookmarks=Array.isArray(book.bookmarks)?book.bookmarks:[];
    ci=Math.max(0,Math.min(Number(book.progress?.chapter)||0,book.chapters.length-1));
    $('#readerLoading').classList.remove('on');
@@ -487,21 +625,30 @@ window.openBook=async id=>{
    if(openingBookId!==id)return;
    if(!latest || !Array.isArray(latest.chapters) || !latest.chapters.length)
      throw new Error('雲端書籍沒有可閱讀的章節');
-   const shouldRefresh=!book || book.id!==id ||
-     Number(latest.updatedAt||0)>Number(book.updatedAt||0);
+   const pending=await pendingGet(id);
+   if(pending){$('#readerLoading').classList.remove('on');showSyncStatus('本機有尚未確認的替換，已保留本機正文',5000);return;}
+   const sameText=!!(book&&book.id===id&&sameEditableNovel_(book,latest));
+   const cloudNewer=!book || book.id!==id || Number(latest.updatedAt||0)>Number(book.updatedAt||0);
+   // If only metadata timestamps differ, use the actual cloud revision as the
+   // editing base. Preserve the current reading position.
+   const shouldRefresh=cloudNewer||sameText;
    if(shouldRefresh){
      const oldScroll=book?.id===id?$('#scroll').scrollTop:0;
      const oldCi=book?.id===id?ci:Number(latest.progress?.chapter)||0;
+     const localProgress=book?.id===id?book.progress:null;
      book=latest;
+     if(localProgress)book.progress=localProgress;
      book.bookmarks=Array.isArray(book.bookmarks)?book.bookmarks:[];
      ci=Math.max(0,Math.min(oldCi,book.chapters.length-1));
      $('#readerLoading').classList.remove('on');
-     showChapter(!cached);
-     if(cached)requestAnimationFrame(()=>$('#scroll').scrollTop=oldScroll);
+     if(cloudNewer || !cached)showChapter(!cached);
+     if(cached&&cloudNewer)requestAnimationFrame(()=>$('#scroll').scrollTop=oldScroll);
+     await cacheBookLocal(book);
    }else{
      $('#readerLoading').classList.remove('on');
+     // Important: never overwrite a newer, conflicting local cache with cloud.
+     toast('本機與雲端正文版本不同，已保留本機內容；編輯前請先比對備份');
    }
-   await cacheBookLocal(latest);
    if(book?.id===id)syncBookmarksForBook(id);
  }).catch(e=>{
    if(openingBookId!==id)return;
@@ -822,25 +969,32 @@ function selectionAbsoluteOffset(info){
 let editorBusy=false;
 async function performReplace(scope){
  if(editorBusy||!book||!replaceSelection?.text)return;
- if(replaceSelection.bookId!==book.id||replaceSelection.chapterIndex!==ci)
-   return toast('章節已切換，請重新選取文字');
+ if(replaceSelection.bookId!==book.id||replaceSelection.chapterIndex!==ci)return toast('章節已切換，請重新選取文字');
  const oldText=replaceSelection.text,newText=$('#replaceNew').value;
  const count=scope==='here'?1:scope==='chapter'?countOccurrences(currentChapterObj()?.content||'',oldText):book.chapters.reduce((n,c)=>n+countOccurrences(c.content||'',oldText),0);
  if(!count)return toast('沒有找到可替換的位置');
  if(scope==='all'&&!confirm(`全文將替換 ${count} 處，是否繼續？`))return;
  const offset=scope==='here'?selectionAbsoluteOffset(replaceSelection):undefined;
  if(scope==='here'&&offset<0)return alert('選取位置與原始文字不一致，請重新選取後再試。');
- const payload={id:book.id,expectedUpdatedAt:book.updatedAt,chapterIndex:scope==='all'?'all':ci,
-   find:oldText,replacement:newText,mode:scope,fields:'content',...(scope==='here'?{offset}:{})};
- editorBusy=true;$('#replaceInfo').textContent='正在備份並確認雲端寫入，請勿重複操作…';
+ editorBusy=true;
  try{
-   const receipt=await editAndVerify('replaceText',payload);
-   await reloadCurrentBook();
-   $('#replaceInfo').textContent=`雲端已確認（約 ${(receipt.elapsedMs/1000).toFixed(1)} 秒）；修改前備份已保留。`;
-   $('#replaceSheet').classList.remove('on');
-   $('#undoBanner').classList.remove('on');
-   toast(`雲端已確認替換 ${count} 處`);
- }catch(e){alert('替換尚未確認完成：'+e.message+'\n請勿立即重複提交。');}
+   if(await pendingGet(book.id))throw new Error('上一筆替換尚未完成雲端確認，請先點「同步」查看；為保護資料暫不接受下一筆');
+   const payload={id:book.id,expectedUpdatedAt:book.updatedAt,chapterIndex:scope==='all'?'all':ci,
+     find:oldText,replacement:newText,mode:scope,fields:'content',...(scope==='here'?{offset}:{})};
+   const before=structuredClone(book);
+   const updated=structuredClone(book);
+   applyLocalReplacement(updated.chapters,payload);
+   const task={id:book.id,token:editToken(),payload,base:contentSnapshot(before),result:contentSnapshot(updated),phase:'queued',error:'',createdAt:Date.now()};
+   await pendingPut(task);
+   try{await cacheBookLocal(updated)}catch(e){await pendingDelete(task.id);throw new Error('本機小說儲存失敗，已取消替換：'+e.message)}
+   book=updated;
+   const scroll=$('#scroll').scrollTop;
+   showChapter(false);requestAnimationFrame(()=>$('#scroll').scrollTop=scroll);
+   $('#replaceSheet').classList.remove('on');$('#undoBanner').classList.remove('on');
+   toast(`本機已替換 ${count} 處，正在自動同步`);
+   showSyncStatus('本機已儲存；雲端同步中（可繼續閱讀）',4500);
+   flushPending().catch(()=>{});
+ }catch(e){alert('替換未完成：'+e.message)}
  finally{editorBusy=false;updateReplaceCounts()}
 }
 
@@ -889,7 +1043,7 @@ $('#speechPause').onclick=()=>{if(!speaking)return;if(speechSynthesis.paused){sp
 $('#speechStop').onclick=()=>{speaking=false;speechPaused=false;speechSynthesis.cancel();clearSpeechMark();saveSpeechSoon();$('#speechStatus').textContent='已停止並保存位置'}
 $('#speechRate').oninput=()=>{$('#speechRateVal').textContent=Number($('#speechRate').value).toFixed(1)+'×';saveSpeechSoon()}
 
-$('#edit').onclick=()=>{const c=book.chapters[ci];$('#drawer').classList.remove('on');$('#editName').textContent=c.title;$('#editText').value=c.content;$('#editor').classList.add('on')};$('#editClose').onclick=()=>$('#editor').classList.remove('on');$('#editSave').onclick=()=>{book.chapters[ci].content=$('#editText').value;book.updatedAt=Date.now();cacheBookLocal(book);$('#editor').classList.remove('on');showChapter(false);backgroundSync(apiPost('saveBook',{payload:JSON.stringify(book)}));toast('已儲存')};$('#restore').onclick=async()=>{const c=book.chapters[ci];if(!c.originalContent)return toast('沒有原文備份');if(confirm('還原本章原文？')){c.content=c.originalContent;$('#editText').value=c.content;await apiPost('saveBook',{payload:JSON.stringify(book)});toast('已還原')}};
+$('#edit').onclick=()=>{const c=book.chapters[ci];$('#drawer').classList.remove('on');$('#editName').textContent=c.title;$('#editText').value=c.content;$('#editor').classList.add('on')};$('#editClose').onclick=()=>$('#editor').classList.remove('on');$('#editSave').onclick=async()=>{if(await pendingGet(book.id))return alert('此書尚有待同步替換，請先完成同步後再編輯整章');book.chapters[ci].content=$('#editText').value;book.updatedAt=Date.now();cacheBookLocal(book);$('#editor').classList.remove('on');showChapter(false);backgroundSync(apiPost('saveBook',{payload:JSON.stringify(book)}));toast('已儲存')};$('#restore').onclick=async()=>{if(await pendingGet(book.id))return alert('此書尚有待同步替換，請先完成同步後再還原');const c=book.chapters[ci];if(!c.originalContent)return toast('沒有原文備份');if(confirm('還原本章原文？')){c.content=c.originalContent;$('#editText').value=c.content;await apiPost('saveBook',{payload:JSON.stringify(book)});toast('已還原')}};
 
 window.toggleBookMenu=(e,id)=>{
  e.stopPropagation();
