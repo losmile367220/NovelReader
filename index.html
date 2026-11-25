@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="私藏書閣">
 <link rel="manifest" href="./manifest.json">
-<title>私藏書閣 V6.5.18｜自動同步與文字替換修復</title>
+<title>私藏書閣 V6.5.20｜自動同步與文字替換修復</title>
 <style>
 :root{
  --app:#f5efe7;--card:#fffdfa;--ink:#201d1a;--muted:#8f857b;--line:#e7ddd2;--accent:#26231f;
@@ -43,8 +43,8 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 .drawer{position:absolute;z-index:15;left:0;right:0;bottom:0;max-height:82vh;overflow:auto;background:#fffaf6;color:#211e1a;border-radius:28px 28px 0 0;padding:12px 18px calc(22px + var(--safe-b));box-shadow:0 -18px 50px #0003;transform:translateY(105%);transition:.25s}.drawer.on{transform:none}.handle{width:48px;height:5px;background:#d3cbc4;border-radius:9px;margin:0 auto 14px}.drawer h3{margin:0}.drawer-head{display:flex;justify-content:space-between;align-items:center}.setting{background:#f7eee8;border-radius:22px;margin-top:14px;padding:5px 14px}.srow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #eadfd8}.srow:last-child{border:0}.step{display:flex;align-items:center;gap:9px}.step button{width:46px;height:36px;border:1px solid #c8beb6;border-radius:99px;background:#fff}.step span{min-width:42px;text-align:center;color:#746a62}
 .palette{display:grid;grid-template-columns:repeat(8,1fr);gap:11px;padding:14px 0}.sw{aspect-ratio:1;border-radius:50%;border:1px solid #0002}.sw.sel{outline:3px solid #2a2723;outline-offset:2px}
 .sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0}
-.sidepanel{position:absolute;z-index:20;top:0;bottom:0;width:min(430px,92vw);background:#fffaf6;color:#211e1a;padding:calc(18px + var(--safe-t)) 16px calc(18px + var(--safe-b));overflow:auto;box-shadow:0 0 40px #0002;transition:.23s}.sidepanel.left{left:0;transform:translateX(-105%)}.sidepanel.right{right:0;transform:translateX(105%)}.sidepanel.on{transform:none}.bmrow{display:flex;align-items:stretch;gap:7px;border-bottom:1px solid #eadfd8}.bmrow .bmitem{flex:1;min-width:0;border-bottom:0}.bm-delete{flex:0 0 auto;align-self:center;background:#fff4f2;color:#aa3535;border:1px solid #f0c3bc;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700}.bm-delete:disabled{opacity:.5}.panelhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.tocitem,.bmitem{width:100%;text-align:left;border:0;border-bottom:1px solid #eadfd8;background:transparent;padding:14px 6px}.tocitem.now{font-weight:850}.bmitem small{display:block;color:#8d8279;margin-top:5px;line-height:1.5}
-.editor{position:fixed;inset:0;z-index:250;background:#f7f1eb;display:none;padding:calc(14px + var(--safe-t)) 14px calc(14px + var(--safe-b))}.editor.on{display:flex;flex-direction:column}.editor textarea{flex:1;min-height:0;width:100%;resize:none;border:1px solid var(--line);border-radius:18px;padding:16px;font-size:17px;line-height:1.7;background:#fff}.editorbar{display:flex;justify-content:space-between;gap:8px;margin-bottom:10px}.editoractions{display:flex;gap:8px;margin-top:10px}
+.sidepanel{overflow-anchor:none;position:absolute;z-index:20;top:0;bottom:0;width:min(430px,92vw);background:#fffaf6;color:#211e1a;padding:calc(18px + var(--safe-t)) 16px calc(18px + var(--safe-b));overflow:auto;box-shadow:0 0 40px #0002;transition:.23s}.sidepanel.left{left:0;transform:translateX(-105%)}.sidepanel.right{right:0;transform:translateX(105%)}.sidepanel.on{transform:none}.bmrow{display:flex;align-items:stretch;gap:7px;border-bottom:1px solid #eadfd8}.bmrow .bmitem{flex:1;min-width:0;border-bottom:0}.bm-delete{flex:0 0 auto;align-self:center;background:#fff4f2;color:#aa3535;border:1px solid #f0c3bc;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700}.bm-delete:disabled{opacity:.5}.panelhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.tocitem,.bmitem{width:100%;text-align:left;border:0;border-bottom:1px solid #eadfd8;background:transparent;padding:14px 6px}.tocitem.now{font-weight:850}.bmitem small{display:block;color:#8d8279;margin-top:5px;line-height:1.5}
+.edit-location-hint{font-size:12px;color:#786f67;margin:0 2px 8px;line-height:1.4}.editor{position:fixed;inset:0;z-index:250;background:#f7f1eb;display:none;padding:calc(14px + var(--safe-t)) 14px calc(14px + var(--safe-b))}.editor.on{display:flex;flex-direction:column}.editor textarea{flex:1;min-height:0;width:100%;resize:none;border:1px solid var(--line);border-radius:18px;padding:16px;font-size:17px;line-height:1.7;background:#fff}.editorbar{display:flex;justify-content:space-between;gap:8px;margin-bottom:10px}.editoractions{display:flex;gap:8px;margin-top:10px}
 .modal{position:fixed;inset:0;z-index:180;background:#0007;display:none;place-items:center;padding:14px}.modal.on{display:grid}.modalbox{width:min(720px,100%);max-height:90vh;overflow:auto;background:var(--card);border-radius:24px;padding:18px}.modalbox textarea,.modalbox input{width:100%;border:1px solid var(--line);border-radius:13px;padding:12px;background:#f8f3ed;margin:6px 0 12px}.modalbox textarea{min-height:260px}.toast{position:fixed;z-index:400;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;background:#222;color:#fff;border-radius:13px;padding:10px 14px;transition:.2s}.toast.on{opacity:1;transform:translate(-50%,0)}
 
 @media(max-width:680px){
@@ -201,7 +201,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}
 
 </section>
 
-<section id="editor" class="editor"><div class="editorbar"><b id="editName"></b><button class="btn" id="editClose">✕</button></div><textarea id="editText"></textarea><div class="editoractions"><button class="btn dark" id="editSave">儲存雲端副本</button><button class="btn" id="restore">還原原文</button></div></section>
+<section id="editor" class="editor"><div class="editorbar"><b id="editName"></b><button class="btn" id="editClose">✕</button></div><div id="editLocationHint" class="edit-location-hint" aria-live="polite"></div><textarea id="editText"></textarea><div class="editoractions"><button class="btn dark" id="editSave">儲存雲端副本</button><button class="btn" id="restore">還原原文</button></div></section>
 
 <div id="importModal" class="modal"><div class="modalbox">
  <div class="panelhead"><h3>匯入小說</h3><button class="btn" id="importClose">✕</button></div>
@@ -736,7 +736,30 @@ $('#scroll').addEventListener('touchend',e=>{
  }
 },{passive:true});
 
-$('#tocOpen').onclick=()=>$('#toc').classList.add('on');$('#cleanTocShortcut').onclick=()=>{$('#reader').classList.remove('clean');$('#toc').classList.add('on');};$('#more').onclick=()=>{hideSelectionActions();$('#drawer').classList.add('on')};$('#tocFromSettings').onclick=()=>{$('#drawer').classList.remove('on');$('#toc').classList.add('on')};$$('[data-close]').forEach(b=>b.onclick=()=>$('#'+b.dataset.close).classList.remove('on'));
+// Opening the TOC always brings the CURRENT chapter into view inside the drawer.
+// Adjust only the panel's own scrollTop: scrollIntoView can accidentally scroll the novel or page.
+function openTocAtCurrentChapter(){
+  const panel=$('#toc');
+  if(!panel || !book)return;
+  $('#reader').classList.remove('clean');
+  $('#drawer').classList.remove('on');
+  panel.classList.add('on');
+  const locate=()=>{
+    if(!panel.classList.contains('on'))return;
+    const current=panel.querySelector('.tocitem.now') || panel.querySelectorAll('.tocitem')[ci];
+    if(!current)return;
+    const pr=panel.getBoundingClientRect(),cr=current.getBoundingClientRect();
+    // Keep selected chapter slightly below the title, without scrolling the reader itself.
+    const next=panel.scrollTop+(cr.top-pr.top)-Math.min(110,Math.max(72,pr.height*.16));
+    panel.scrollTop=Math.max(0,Math.min(panel.scrollHeight-panel.clientHeight,next));
+  };
+  // Render/reflow the visible drawer before calculating its viewport geometry.
+  requestAnimationFrame(()=>requestAnimationFrame(locate));
+}
+$('#tocOpen').onclick=openTocAtCurrentChapter;
+$('#cleanTocShortcut').onclick=openTocAtCurrentChapter;
+$('#more').onclick=()=>{hideSelectionActions();$('#drawer').classList.add('on')};
+$('#tocFromSettings').onclick=openTocAtCurrentChapter;$$('[data-close]').forEach(b=>b.onclick=()=>$('#'+b.dataset.close).classList.remove('on'));
 $('#prev').onclick=()=>{if(ci>0){ci--;showChapter(true)}};$('#next').onclick=()=>{if(ci<book.chapters.length-1){ci++;showChapter(true)}};
 $('#leave').onclick=$('#closeBook').onclick=()=>{saveProgress();speechSynthesis.cancel();$('#reader').classList.remove('on','clean');document.body.style.overflow='';renderBooks();refresh()};
 function bmKey(){return ci+':'+Math.round($('#scroll').scrollTop/120)}
@@ -1152,7 +1175,73 @@ $('#speechPause').onclick=()=>{if(!speaking)return;if(speechSynthesis.paused){sp
 $('#speechStop').onclick=()=>{speaking=false;speechPaused=false;speechSynthesis.cancel();clearSpeechMark();saveSpeechSoon();$('#speechStatus').textContent='已停止並保存位置'}
 $('#speechRate').oninput=()=>{$('#speechRateVal').textContent=Number($('#speechRate').value).toFixed(1)+'×';saveSpeechSoon()}
 
-$('#edit').onclick=()=>{const c=book.chapters[ci];$('#drawer').classList.remove('on');$('#editName').textContent=c.title;$('#editText').value=c.content;$('#editor').classList.add('on')};$('#editClose').onclick=()=>$('#editor').classList.remove('on');$('#editSave').onclick=async()=>{if(await pendingGet(book.id))return alert('此書尚有待同步替換，請先完成同步後再編輯整章');book.chapters[ci].content=$('#editText').value;book.updatedAt=Date.now();cacheBookLocal(book);$('#editor').classList.remove('on');showChapter(false);backgroundSync(apiPost('saveBook',{payload:JSON.stringify(book)}));toast('已儲存')};$('#restore').onclick=async()=>{if(await pendingGet(book.id))return alert('此書尚有待同步替換，請先完成同步後再還原');const c=book.chapters[ci];if(!c.originalContent)return toast('沒有原文備份');if(confirm('還原本章原文？')){c.content=c.originalContent;$('#editText').value=c.content;await apiPost('saveBook',{payload:JSON.stringify(book)});toast('已還原')}};
+// Capture the paragraph currently at the top of the visible reading area BEFORE opening the editor.
+// Map its original source offset to the textarea; do not use scroll percentage because
+// the reading view and textarea wrap lines differently (especially on phones).
+function getReadingEditPosition(raw) {
+ const scroller=$('#scroll');
+ const scrollerRect=scroller.getBoundingClientRect();
+ const nodes=[...$('#content').querySelectorAll('p')];
+ if(!nodes.length)return {offset:0,paragraph:1};
+ const visibleTop=scrollerRect.top+Math.min(22,scrollerRect.height/8);
+ let chosen=nodes.find(p=>p.getBoundingClientRect().bottom>visibleTop);
+ if(!chosen)chosen=nodes[nodes.length-1];
+ const paragraphIndex=nodes.indexOf(chosen);
+ const paragraphText=chosen.textContent||'';
+ // ShowChapter() trims each newline-separated paragraph. Find these in source order,
+ // so even repeated identical paragraphs resolve to the correct occurrence.
+ let sourcePos=0;
+ for(let i=0;i<=paragraphIndex;i++) {
+   const t=nodes[i].textContent||'';
+   const found=raw.indexOf(t,sourcePos);
+   if(found<0)return {offset:Math.min(raw.length,sourcePos),paragraph:paragraphIndex+1};
+   sourcePos=found;
+   if(i<paragraphIndex)sourcePos+=t.length;
+ }
+ let withinParagraph=0;
+ // Optional finer positioning: find the caret at the top visible line in this paragraph.
+ // Both Safari and Chromium supply a caret hit-test method; fall back to paragraph start.
+ try {
+   const r=chosen.getBoundingClientRect();
+   const x=Math.min(r.right-8,Math.max(r.left+8,r.left+Math.min(30,r.width/3)));
+   const y=Math.min(r.bottom-2,Math.max(r.top+2,visibleTop+2));
+   let node=null,offset=0;
+   if(document.caretRangeFromPoint) {
+     const caret=document.caretRangeFromPoint(x,y);
+     if(caret){node=caret.startContainer;offset=caret.startOffset;}
+   }else if(document.caretPositionFromPoint) {
+     const caret=document.caretPositionFromPoint(x,y);
+     if(caret){node=caret.offsetNode;offset=caret.offset;}
+   }
+   if(node && (node===chosen || chosen.contains(node))) {
+     if(node.nodeType===Node.TEXT_NODE) {
+       const range=document.createRange();range.selectNodeContents(chosen);
+       range.setEnd(node,offset);
+       withinParagraph=range.toString().length;
+     }
+   }
+ }catch(_ignore){}
+ return {offset:Math.min(raw.length,sourcePos+Math.min(withinParagraph,paragraphText.length)),paragraph:paragraphIndex+1};
+}
+function openEditorAtReadingPosition(){
+ if(!book || !book.chapters?.[ci])return;
+ const c=book.chapters[ci];
+ const content=String(c.content||'');
+ const target=getReadingEditPosition(content);
+ $('#drawer').classList.remove('on');
+ $('#editName').textContent=c.title;
+ const area=$('#editText');area.value=content;
+ $('#editLocationHint').textContent=`已定位到目前閱讀位置（約第 ${target.paragraph} 段）`;
+ $('#editor').classList.add('on');
+ // Focus after editor is visible, so textarea scrolls to selection on iOS and desktop.
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   try{area.focus({preventScroll:true});}catch(_ignore){area.focus();}
+   area.setSelectionRange(target.offset,target.offset);
+   // Safari sometimes delays textarea caret scrolling until its next frame.
+   requestAnimationFrame(()=>area.setSelectionRange(target.offset,target.offset));
+ }));
+}
+$('#edit').onclick=openEditorAtReadingPosition;$('#editClose').onclick=()=>$('#editor').classList.remove('on');$('#editSave').onclick=async()=>{if(await pendingGet(book.id))return alert('此書尚有待同步替換，請先完成同步後再編輯整章');book.chapters[ci].content=$('#editText').value;book.updatedAt=Date.now();cacheBookLocal(book);$('#editor').classList.remove('on');showChapter(false);backgroundSync(apiPost('saveBook',{payload:JSON.stringify(book)}));toast('已儲存')};$('#restore').onclick=async()=>{if(await pendingGet(book.id))return alert('此書尚有待同步替換，請先完成同步後再還原');const c=book.chapters[ci];if(!c.originalContent)return toast('沒有原文備份');if(confirm('還原本章原文？')){c.content=c.originalContent;$('#editText').value=c.content;await apiPost('saveBook',{payload:JSON.stringify(book)});toast('已還原')}};
 
 window.toggleBookMenu=(e,id)=>{
  e.stopPropagation();
